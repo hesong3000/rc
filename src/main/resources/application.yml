@@ -1,0 +1,20 @@
+spring:
+    application:
+        name: springboot-rabbitmq
+    rabbitmq:
+        host: 10.25.16.115
+        port: 5672
+        username: guest
+        password: guest
+        #发布确认
+        publisher-confirms: true
+        virtual-host: /
+    redis:
+        host: 127.0.0.1
+        port: 6379
+        pool:
+          max-active:8
+          max-wait:1
+          max-idle:8
+          min-idle:0
+        timeout: 5000
