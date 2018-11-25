@@ -33,9 +33,12 @@ public class RCUserConnectTask implements Runnable{
         avUser.setClient_id(client_id);
         avUser.setClient_name(client_name);
         avUser.setBinding_key(binding_key);
-        boolean ret = RedisUtils.set(redisTemplate,avUserItem,avUser);
-        log.info("avUser set result {}", ret);
-        AVUser avUser_res = (AVUser)RedisUtils.get(redisTemplate,avUserItem);
-        log.info("avUser get user name: {}",avUser_res.getClient_name());
+        boolean ret = RedisUtils.set(redisTemplate,avUserItem,avUser,MQConstant.USER_ONLINE_EXPIRE);
+        if(ret==false){
+            log.error("insert user to redis failed, {}", avUser.toString());
+            return;
+        }
+        log.info("get user connect msg, {}",avUser.toString());
+        //AVUser avUser_res = (AVUser)RedisUtils.get(redisTemplate,avUserItem);
     }
 }
