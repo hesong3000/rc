@@ -7,6 +7,7 @@ public class CreateRoomMsg {
     String type;
     String creator_id;
     String room_id;
+    String room_name;
 
     public String getType() {
         return type;
@@ -40,14 +41,13 @@ public class CreateRoomMsg {
         this.room_name = room_name;
     }
 
-    public List<Map<String, String>> getUser_list() {
-        return user_list;
+    public List<Map<String, String>> getMem_list() {
+        return mem_list;
     }
 
-    public void setUser_list(List<Map<String, String>> user_list) {
-        this.user_list = user_list;
+    public void setMem_list(List<Map<String, String>> mem_list) {
+        this.mem_list = mem_list;
     }
 
-    String room_name;
-    List<Map<String,String>> user_list;
+    List<Map<String,String>> mem_list;
 }

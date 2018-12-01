@@ -2,7 +2,7 @@ package com.example.demo.po;
 
 import java.io.Serializable;
 
-public class AVUser implements Serializable {
+public class AVUserInfo implements Serializable {
 
     public String getClient_id() {
         return client_id;
@@ -31,13 +31,4 @@ public class AVUser implements Serializable {
     private String client_id;
     private String client_name;
     private String binding_key;
-
-    @Override
-    public String toString() {
-        return "AVUser{" +
-                "client_id='" + client_id + '\'' +
-                ", client_name='" + client_name + '\'' +
-                ", binding_key='" + binding_key + '\'' +
-                '}';
-    }
 }

@@ -1,13 +1,14 @@
 package com.example.demo.task;
 
-import org.springframework.dao.DataAccessException;
-import org.springframework.data.redis.connection.RedisConnection;
-import org.springframework.data.redis.core.RedisCallback;
+import org.springframework.data.redis.core.Cursor;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.serializer.RedisSerializer;
+import org.springframework.data.redis.core.ScanOptions;
+import org.springframework.data.redis.core.SetOperations;
 import org.springframework.stereotype.Component;
 
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.concurrent.TimeUnit;
 
 @Component
@@ -66,6 +67,49 @@ public final class RedisUtils {
         return redisTemplate.opsForValue().get(key);
     }
 
+    public static Set<Object> sGet(RedisTemplate redisTemplate, String key){
+        try{
+            return redisTemplate.opsForSet().members(key);
+        }catch (Exception e){
+            e.printStackTrace();
+            return null;
+        }
+    }
+
+    public static boolean sHasMember(RedisTemplate redisTemplate, String key, Object value){
+        try{
+            return redisTemplate.opsForSet().isMember(key, value);
+        }catch (Exception e){
+            e.printStackTrace();
+            return false;
+        }
+    }
+
+    public static long sSet(RedisTemplate redisTemplate, String key, Object...values){
+        try{
+            redisTemplate.opsForSet().add(key,values);
+            return values.length;
+        }catch (Exception e){
+            e.printStackTrace();
+            return 0;
+        }
+    }
+
+    public static Set<Object> sScan(RedisTemplate redisTemplate, String key, String valueMatch){
+        try{
+            Set<Object> matchValues = new HashSet<>();
+            Cursor<Object> cursor = redisTemplate.opsForSet().scan(key,
+                    new ScanOptions.ScanOptionsBuilder().match(valueMatch).count(1).build());
+            while (cursor.hasNext()){
+                matchValues.add(cursor.next());
+            }
+            return matchValues;
+        }catch (Exception e){
+            e.printStackTrace();
+            return null;
+        }
+    }
+
     public static Object hget(RedisTemplate redisTemplate, String key, String item){
         return redisTemplate.opsForHash().get(key, item);
     }
@@ -93,6 +137,7 @@ public final class RedisUtils {
     }
 
     public static boolean hHasKey(RedisTemplate redisTemplate, String key, String item){
+        //System.out.println("hHasKey: "+redisTemplate.opsForHash().hasKey(key, item)+" end");
         return redisTemplate.opsForHash().hasKey(key, item);
     }
 }

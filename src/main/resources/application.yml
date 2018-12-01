@@ -4,8 +4,8 @@ spring:
     rabbitmq:
         host: 10.25.16.115
         port: 5672
-        username: guest
-        password: guest
+        username: sdt
+        password: sdt108
         #发布确认
         publisher-confirms: true
         virtual-host: /

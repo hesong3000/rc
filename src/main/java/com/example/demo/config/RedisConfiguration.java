@@ -31,7 +31,8 @@ public class RedisConfiguration {
         redisTemplate.setValueSerializer(fastJson2JsonRedisSerializer());
         redisTemplate.setKeySerializer(new StringRedisSerializer());
         redisTemplate.afterPropertiesSet();
-        redisTemplate.setEnableTransactionSupport(true);//打开事务支持
+        //开启事务可能会报错，解决不了
+        //redisTemplate.setEnableTransactionSupport(true);//打开事务支持
         return redisTemplate;
     }
 
