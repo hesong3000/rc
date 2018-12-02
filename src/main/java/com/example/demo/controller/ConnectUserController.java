@@ -19,7 +19,7 @@ public class ConnectUserController {
     public String connectUser(){
         Map<String, Object> map = new HashMap<String, Object>();
         map.put("type", RCUserConnectTask.taskType);
-        map.put("client_id", "123456");
+        map.put("client_id", "client_1");
         map.put("client_name", "wk");
         map.put("binding_key", "wk_binding_key");
         map.put("expired", 0);

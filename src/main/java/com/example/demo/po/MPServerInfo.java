@@ -21,10 +21,9 @@ public class MPServerInfo implements Serializable {
         this.binding_key = binding_key;
     }
 
-
-    private String mp_id;
-    private String binding_key;
-    private int userd_stream_count;
+    private String mp_id = "";
+    private String binding_key = "";
+    private int userd_stream_count = 0;
 
     public int getUserd_stream_count() {
         return userd_stream_count;
@@ -42,8 +41,8 @@ public class MPServerInfo implements Serializable {
         this.max_stream_count = max_stream_count;
     }
 
-    private int max_stream_count;
-    private int reserve_stream_count;
+    private int max_stream_count = 0;
+    private int reserve_stream_count = 0;
 
     public int getReserve_stream_count() {
         return reserve_stream_count;
@@ -53,13 +52,13 @@ public class MPServerInfo implements Serializable {
         this.reserve_stream_count = reserve_stream_count;
     }
 
-    public Map<String, String> getRoom_list() {
+    public Map<String, Integer> getRoom_list() {
         return room_list;
     }
 
-    public void setRoom_list(Map<String, String> room_list) {
+    public void setRoom_list(Map<String, Integer> room_list) {
         this.room_list = room_list;
     }
 
-    private Map<String, String> room_list;
+    private Map<String, Integer> room_list = new HashMap<>();
 }

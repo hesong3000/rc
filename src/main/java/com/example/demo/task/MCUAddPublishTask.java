@@ -21,9 +21,9 @@ import java.util.Date;
 import java.util.Iterator;
 import java.util.Map;
 
-@Component(value=RCAddPublishTask.taskType)
+@Component(value= MCUAddPublishTask.taskType)
 @Scope("prototype")
-public class RCAddPublishTask extends SimpleTask implements Runnable{
+public class MCUAddPublishTask extends SimpleTask implements Runnable{
     private static Logger log = LoggerFactory.getLogger(RCUserConnectTask.class);
     public final static String taskType = "add_publisher";
     public final static String taskFailType = "msg_fail_response";
@@ -41,19 +41,20 @@ public class RCAddPublishTask extends SimpleTask implements Runnable{
         String room_id = requestMsg.getString("room_id");
         String client_id = requestMsg.getString("client_id");
         String stream_id = requestMsg.getString("stream_id");
+        String client_bindkey = requestMsg.getString("client_bindkey");
         JSONObject jsonOption = requestMsg.getJSONObject("options");
-        if(room_id==null||client_id==null||stream_id==null||jsonOption==null){
-            log.error("{} params invalid, msg: {}",RCAddPublishTask.taskType,msg);
+        if(room_id==null||client_id==null||stream_id==null||jsonOption==null||client_bindkey==null){
+            log.error("{} params invalid, msg: {}", MCUAddPublishTask.taskType,msg);
             return AVErrorType.ERR_PARAM_REQUEST;
         }
         Boolean screencast = jsonOption.getBoolean("screencast");
-        if(!screencast)
+        if(screencast==null)
             screencast = false;
         Boolean audioMuted = jsonOption.getBoolean("audioMuted");
-        if(!audioMuted)
+        if(audioMuted==null)
             audioMuted = false;
         Boolean videoMuted = jsonOption.getBoolean("videoMuted");
-        if(!videoMuted)
+        if(videoMuted==null)
             videoMuted = false;
         result.client_id = client_id;
         result.stream_id = stream_id;
@@ -134,10 +135,10 @@ public class RCAddPublishTask extends SimpleTask implements Runnable{
         //错误消息回复
         if(result.client_id.length()!=0){
             JSONObject response_msg = new JSONObject();
-            response_msg.put("type", RCAddPublishTask.taskFailType);
+            response_msg.put("type", MCUAddPublishTask.taskFailType);
             response_msg.put("client_id", result.client_id);
             JSONObject failed_msg = new JSONObject();
-            failed_msg.put("sub_type", RCAddPublishTask.taskType);
+            failed_msg.put("sub_type", MCUAddPublishTask.taskType);
             failed_msg.put("stream_id", result.stream_id);
             failed_msg.put("retcode", processCode);
             response_msg.put("msg",failed_msg);
@@ -151,7 +152,7 @@ public class RCAddPublishTask extends SimpleTask implements Runnable{
     @Override
     @Transactional
     public void run() {
-        log.info("execute RCAddPublishTask at {}", new Date());
+        log.info("execute MCUAddPublishTask at {}", new Date());
         JSONObject requestMsg = JSON.parseObject(msg);
         int processCode = AVErrorType.ERR_NOERROR;
         Result result = new Result();
@@ -162,6 +163,5 @@ public class RCAddPublishTask extends SimpleTask implements Runnable{
     class Result{
         String client_id = "";
         String stream_id = "";
-        AVStreamInfo avStreamInfo = null;
     }
 }

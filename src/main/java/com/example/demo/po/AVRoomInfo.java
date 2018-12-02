@@ -3,9 +3,9 @@ package com.example.demo.po;
 import java.io.Serializable;
 
 public class AVRoomInfo implements Serializable {
-    private String room_id;
-    private String room_name;
-    private String creator_id;
+    private String room_id = "";
+    private String room_name = "";
+    private String creator_id = "";
 
     public String getRoom_id() {
         return room_id;
@@ -39,5 +39,5 @@ public class AVRoomInfo implements Serializable {
         this.create_time = create_time;
     }
 
-    private long create_time;
+    private long create_time = 0;
 }

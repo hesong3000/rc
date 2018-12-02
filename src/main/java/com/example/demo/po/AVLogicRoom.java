@@ -6,10 +6,10 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class AVLogicRoom implements Serializable {
-    private String room_id;
-    private String room_name;
-    private String creator_id;
-    private Date create_time;
+    private String room_id = "";
+    private String room_name = "";
+    private String creator_id = "";
+    private Date create_time = new Date();
     private Map<String, RoomMemInfo> room_mems = new HashMap<>();
     private Map<String, PublishStreamInfo> publish_streams = new HashMap<>();
     private Map<String, CascadeStreamInfo> cascade_streams = new HashMap<>();

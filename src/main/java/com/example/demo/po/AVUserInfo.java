@@ -28,7 +28,7 @@ public class AVUserInfo implements Serializable {
         this.binding_key = binding_key;
     }
 
-    private String client_id;
-    private String client_name;
-    private String binding_key;
+    private String client_id = "";
+    private String client_name = "";
+    private String binding_key = "";
 }

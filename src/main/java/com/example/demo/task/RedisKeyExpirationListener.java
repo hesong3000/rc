@@ -36,13 +36,13 @@ public class RedisKeyExpirationListener extends KeyExpirationEventMessageListene
             log.info("AVUserInfo expired: {}",expiredUserID);
             map.put("type",RCUserExpiredTask.taskType);
             map.put("client_id",expiredUserID);
-            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, JSON.toJSONString(map));
+            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, JSON.toJSON(map));
         }else if(expiredKey.startsWith(MQConstant.REDIS_MP_KEY_PREFIX)){
             String expiredMPID = expiredKey.substring(MQConstant.REDIS_MP_KEY_PREFIX.length(),expiredKey.length());
             log.info("MPServer expired: {}",expiredMPID);
             map.put("type",RCMPExpiredTask.taskType);
             map.put("mp_id",expiredMPID);
-            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, JSON.toJSONString(map));
+            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, JSON.toJSON(map));
         }
     }
 

@@ -3,6 +3,7 @@ package com.example.demo.task;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
 import com.example.demo.config.MQConstant;
+import com.example.demo.po.AVStreamInfo;
 import com.example.demo.po.AVUserInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -53,6 +54,10 @@ public class MCUPublishInitializeTask extends SimpleTask implements Runnable{
             request_msg.put("stream_id", stream_id);
             log.info("mq send to mcu {}: {}", mcu_bindkey,request_msg);
             rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mcu_bindkey, request_msg);
+
+            //删除缓存的媒体流信息
+            String avStreamKey = MQConstant.REDIS_STREAM_KEY_PREFIX+stream_id;
+            RedisUtils.delKey(redisTemplate, avStreamKey);
         }
     }
 }

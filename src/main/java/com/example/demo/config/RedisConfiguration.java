@@ -30,6 +30,8 @@ public class RedisConfiguration {
         redisTemplate.setConnectionFactory(redisConnectionFactory);
         redisTemplate.setValueSerializer(fastJson2JsonRedisSerializer());
         redisTemplate.setKeySerializer(new StringRedisSerializer());
+        redisTemplate.setHashKeySerializer(new StringRedisSerializer());
+        redisTemplate.setHashValueSerializer(fastJson2JsonRedisSerializer());
         redisTemplate.afterPropertiesSet();
         //开启事务可能会报错，解决不了
         //redisTemplate.setEnableTransactionSupport(true);//打开事务支持

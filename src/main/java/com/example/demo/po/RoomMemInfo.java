@@ -5,25 +5,14 @@ import java.util.HashMap;
 import java.util.Map;
 
 public class RoomMemInfo implements Serializable {
-    private Boolean mem_online;
-    private String mem_id;
-    private String mem_name;
+    private Boolean mem_online = false;
+    private String mem_id = "";
+    private String mem_name = "";
     private Map<String, String> publish_streams = new HashMap<>();
     private Map<String, String> subscribe_streams = new HashMap<>();
 
     public Boolean isMem_Online() {
         return mem_online;
-    }
-
-    @Override
-    public String toString() {
-        return "RoomMemInfo{" +
-                "online=" + mem_online +
-                ", mem_id='" + mem_id + '\'' +
-                ", mem_name='" + mem_name + '\'' +
-                ", publish_streams=" + publish_streams +
-                ", subscribe_streams=" + subscribe_streams +
-                '}';
     }
 
     public void setMem_Online(Boolean mem_online) {

@@ -11,26 +11,13 @@ import java.util.List;
 import java.util.Map;
 
 public class PublishStreamInfo implements Serializable {
-    private String publish_streamid;
-    private String publish_clientid;
-    private boolean screencast;
-
-    @Override
-    public String toString() {
-        return "PublishStreamInfo{" +
-                "publish_streamid='" + publish_streamid + '\'' +
-                ", publish_clientid='" + publish_clientid + '\'' +
-                ", screencast=" + screencast +
-                ", subscribers=" + subscribers +
-                ", audioMuted=" + audioMuted +
-                ", videoMuted=" + videoMuted +
-                ", stream_mps=" + stream_mps +
-                '}';
-    }
+    private String publish_streamid = "";
+    private String publish_clientid = "";
+    private boolean screencast = false;
 
     private Map<String, String> subscribers = new HashMap<>();
-    private boolean audioMuted;
-    private boolean videoMuted;
+    private boolean audioMuted = false;
+    private boolean videoMuted = false;
     private List<String> stream_mps = new LinkedList<String>();
 
     public String getPublish_streamid() {
