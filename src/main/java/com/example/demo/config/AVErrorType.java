@@ -9,4 +9,7 @@ public class AVErrorType {
     public final static int ERR_ROOM_KICK = 105;            //用户已被剔除
     public final static int ERR_STREAM_CONFLICT = 106;      //发布的媒体流冲突
     public final static int ERR_MCURES_NOT_ENOUGH = 107;    //MCU资源不足
+    public final static int ERR_STREAM_PUBLISH = 108;       //发布流过程出错
+    public final static int ERR_STREAM_SUBSCRIBE = 109;     //订阅流过程出错
+    public final static int ERR_STREAM_SHUTDOWN = 110;      //发布流已被关闭
 }

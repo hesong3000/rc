@@ -18,7 +18,16 @@ public class PublishStreamInfo implements Serializable {
     private Map<String, String> subscribers = new HashMap<>();
     private boolean audioMuted = false;
     private boolean videoMuted = false;
-    private List<String> stream_mps = new LinkedList<String>();
+
+    public String getStream_process_mcuid() {
+        return stream_process_mcuid;
+    }
+
+    public void setStream_process_mcuid(String stream_process_mcuid) {
+        this.stream_process_mcuid = stream_process_mcuid;
+    }
+
+    private String stream_process_mcuid = "";
 
     public String getPublish_streamid() {
         return publish_streamid;
@@ -66,13 +75,5 @@ public class PublishStreamInfo implements Serializable {
 
     public void setVideoMuted(boolean videoMuted) {
         this.videoMuted = videoMuted;
-    }
-
-    public List<String> getStream_mps() {
-        return stream_mps;
-    }
-
-    public void setStream_mps(List<String> stream_mps) {
-        this.stream_mps = stream_mps;
     }
 }

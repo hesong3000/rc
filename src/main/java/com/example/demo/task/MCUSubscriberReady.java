@@ -13,16 +13,13 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.util.Date;
-import java.util.Iterator;
-import java.util.Map;
 
-@Component(value= MCUPublishReadyTask.taskType)
+@Component(value= MCUSubscriberReady.taskType)
 @Scope("prototype")
-public class MCUPublishReadyTask extends SimpleTask implements Runnable{
-    private static Logger log = LoggerFactory.getLogger(MCUPublishReadyTask.class);
-    public final static String taskType = "publish_ready";
-    public final static String taskNotType = "stream_add_notice";
-    public final static String taskFailType = "remove_publisher";
+public class MCUSubscriberReady extends SimpleTask implements Runnable {
+    private static Logger log = LoggerFactory.getLogger(MCUSubscriberReady.class);
+    public final static String taskType = "subscriber_ready";
+    public final static String taskFailType = "remove_subscriber";
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
     @Autowired
@@ -31,37 +28,36 @@ public class MCUPublishReadyTask extends SimpleTask implements Runnable{
     @Override
     public void run() {
         /*
-            1、检测客户端是否存活，若存活则发送publish_ready到客户端，若不存活则发送removePublish请求到MCU，逻辑退出
+            1、检查客户端是否存活，若存活则发送subscriber_ready到客户端，否则发送remove_subscriber到mcu
             2、更新AV_MPs哈希键和AV_Rooms哈希键，必须正确，错误打印ERROR级别日志，为逻辑错误，需要检查原因
-            3、向会议室中再会的各成员发送stream_add_notice通知
          */
-        log.info("execute MCUPublishReadyTask at {}", new Date());
+        log.info("execute MCUSubscriberReady at {}", new Date());
         JSONObject jsonObject = JSON.parseObject(msg);
         String client_id = jsonObject.getString("client_id");
-        String stream_id = jsonObject.getString("stream_id");
+        String publish_stream_id = jsonObject.getString("publish_stream_id");
         String mcu_id = jsonObject.getString("mcu_id");
         String avUserKey = MQConstant.REDIS_USER_KEY_PREFIX+client_id;
         //检查客户端是否存活
         AVUserInfo avUserInfo = (AVUserInfo)RedisUtils.get(redisTemplate,avUserKey);
         if(avUserInfo==null){
-            //发送remove_publisher到处理该媒体流的MCU
+            //发送remove_subscriber到处理该媒体流的MCU
             JSONObject fail_rollback_msg = new JSONObject();
-            fail_rollback_msg.put("type", MCUPublishReadyTask.taskFailType);
+            fail_rollback_msg.put("type", MCUSubscriberReady.taskFailType);
             fail_rollback_msg.put("client_id", client_id);
-            fail_rollback_msg.put("stream_id", stream_id);
+            fail_rollback_msg.put("publish_stream_id", publish_stream_id);
             String mcu_bindkey =MQConstant.MQ_MCU_KEY_PREFIX+mcu_id;
             log.warn("mq send rollback_msg to mcu {}: {}", mcu_bindkey,fail_rollback_msg);
             rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mcu_bindkey,fail_rollback_msg);
             return;
         }
 
-        //透传publish_ready消息到客户端
+        //透传subscriber_ready消息到客户端
         String client_bindkey = avUserInfo.getBinding_key();
         log.warn("mq send msg to client  {}: {}", client_bindkey,jsonObject);
         rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, client_bindkey,jsonObject);
 
-        //检查AV_Stream:[StreamID]键，获取stream所在会议室以及媒体流属性信息，用于更新会议室
-        String avStreamKey = MQConstant.REDIS_STREAM_KEY_PREFIX+stream_id;
+        //检查AV_Stream:[StreamID]键，获取发布流所在会议室以及媒体流属性信息，用于更新会议室
+        String avStreamKey = MQConstant.REDIS_STREAM_KEY_PREFIX+publish_stream_id;
         AVStreamInfo avStreamInfo = (AVStreamInfo)RedisUtils.get(redisTemplate, avStreamKey);
         if(avStreamInfo==null){
             //此处获取不到则属于逻辑错误，检查BUG
@@ -83,47 +79,16 @@ public class MCUPublishReadyTask extends SimpleTask implements Runnable{
         //更新逻辑会议室信息-room_mems
         RoomMemInfo roomMemInfo = avLogicRoom.getRoom_mems().get(client_id);
         if(roomMemInfo!=null){
-            roomMemInfo.getPublish_streams().put(stream_id,stream_id);
+            roomMemInfo.getSubscribe_streams().put(publish_stream_id,publish_stream_id);
         }else{
             //此处获取不到则属于逻辑错误，检查BUG
             log.error("can not get roomMemInfo, msg: {}", msg);
             return;
         }
+
         //更新逻辑会议室信息-publish_streams
-        PublishStreamInfo publishStreamInfo = new PublishStreamInfo();
-        publishStreamInfo.setPublish_clientid(client_id);
-        publishStreamInfo.setPublish_streamid(stream_id);
-        publishStreamInfo.setScreencast(avStreamInfo.getScreencast());
-        publishStreamInfo.setStream_process_mcuid(mcu_id);
-        publishStreamInfo.setAudioMuted(avStreamInfo.getAudioMuted());
-        publishStreamInfo.setVideoMuted(avStreamInfo.getVideoMuted());
-        avLogicRoom.getPublish_streams().put(stream_id, publishStreamInfo);
-
-        //向再会的用户发出stream_add_notice通知
-        JSONObject notice_msg = new JSONObject();
-        notice_msg.put("type", MCUPublishReadyTask.taskNotType);
-        notice_msg.put("room_id", roomID);
-        notice_msg.put("client_id", client_id);
-        notice_msg.put("stream_id", stream_id);
-        JSONObject option_msg = new JSONObject();
-        option_msg.put("video", !publishStreamInfo.isVideoMuted());
-        option_msg.put("audio", !publishStreamInfo.isAudioMuted());
-        option_msg.put("screencast",publishStreamInfo.isScreencast());
-        notice_msg.put("options",option_msg);
-        Iterator<Map.Entry<String, RoomMemInfo>> iterator = avLogicRoom.getRoom_mems().entrySet().iterator();
-        while (iterator.hasNext()){
-            Map.Entry<String, RoomMemInfo> entry = iterator.next();
-            RoomMemInfo notice_mem = entry.getValue();
-            String mem_id = notice_mem.getMem_id();
-            boolean mem_online = notice_mem.isMem_Online();
-            if(mem_id == client_id || mem_online == false)
-                continue;
-            String mem_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+mem_id;
-
-            log.info("mq send notice {}: {}",mem_bindkey,notice_msg);
-            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mem_bindkey, notice_msg);
-        }
-
+        PublishStreamInfo publishStreamInfo = avLogicRoom.getPublish_streams().get(publish_stream_id);
+        publishStreamInfo.getSubscribers().put(client_id,client_id);
         //将更新后的逻辑会议室信息存储
         if(RedisUtils.hset(redisTemplate, avRooms_key, avRoom_hashKey, avLogicRoom)==false){
             log.error("redis hset avroominfo failed, key: {} hashket: {}, value: {}",

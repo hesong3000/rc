@@ -24,7 +24,7 @@ import java.util.Map;
 @Component(value= MCUAddPublishTask.taskType)
 @Scope("prototype")
 public class MCUAddPublishTask extends SimpleTask implements Runnable{
-    private static Logger log = LoggerFactory.getLogger(RCUserConnectTask.class);
+    private static Logger log = LoggerFactory.getLogger(MCUAddPublishTask.class);
     public final static String taskType = "add_publisher";
     public final static String taskFailType = "msg_fail_response";
     @Autowired
@@ -82,6 +82,7 @@ public class MCUAddPublishTask extends SimpleTask implements Runnable{
             avStreamInfo.setScreencast(screencast);
             avStreamInfo.setVideoMuted(videoMuted);
             avStreamInfo.setAudioMuted(audioMuted);
+            avStreamInfo.setPublisher_id(client_id);
             avStreamInfo.setPublish(true);
         }else{
             return AVErrorType.ERR_STREAM_CONFLICT;

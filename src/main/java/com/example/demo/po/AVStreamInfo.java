@@ -10,6 +10,16 @@ public class AVStreamInfo implements Serializable{
     private Boolean videoMuted = false;
     private String mcu_bingkey = "";
 
+    public String getPublisher_id() {
+        return publisher_id;
+    }
+
+    public void setPublisher_id(String publisher_id) {
+        this.publisher_id = publisher_id;
+    }
+
+    private String publisher_id = "";
+
     public Boolean getPublish() {
         return isPublish;
     }
