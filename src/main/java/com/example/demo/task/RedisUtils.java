@@ -76,6 +76,11 @@ public final class RedisUtils {
         }
     }
 
+    public static boolean sRemoveMember(RedisTemplate redisTemplate, String key, Object...values){
+        redisTemplate.opsForSet().remove(key,values);
+        return true;
+    }
+
     public static boolean sHasMember(RedisTemplate redisTemplate, String key, Object value){
         try{
             return redisTemplate.opsForSet().isMember(key, value);

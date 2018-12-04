@@ -91,6 +91,13 @@ public class MCUMuteStreamTask extends SimpleTask implements Runnable {
             }
         }
 
+        //获得处理该发布流的mcu
+        String mcu_id = publishStreamInfo.getStream_process_mcuid();
+        String mcu_bindkey = MQConstant.MQ_MCU_KEY_PREFIX+mcu_id;
+        //发送处理请求到MCU
+        log.info("mq send to mcu {}: {}", mcu_bindkey,requestMsg);
+        rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mcu_bindkey, requestMsg);
+
         return AVErrorType.ERR_NOERROR;
     }
 

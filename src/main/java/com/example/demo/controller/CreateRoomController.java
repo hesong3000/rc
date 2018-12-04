@@ -22,8 +22,8 @@ public class CreateRoomController {
     public String createRoom(){
         //for(int i = 0; i<99; i++) {
             CreateRoomMsg createRoomMsg = new CreateRoomMsg();
-            createRoomMsg.setCreator_id("client_5");
-            createRoomMsg.setRoom_id("222222");
+            createRoomMsg.setCreator_id("client_1");
+            createRoomMsg.setRoom_id("333333");
             createRoomMsg.setRoom_name("room2");
             createRoomMsg.setType(RCCreateRoomTask.taskType);
             List<Map<String, String>> user_list = new LinkedList<Map<String, String>>();

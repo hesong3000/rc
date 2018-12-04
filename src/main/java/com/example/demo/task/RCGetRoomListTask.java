@@ -5,6 +5,7 @@ import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.example.demo.config.MQConstant;
 import com.example.demo.po.AVRoomInfo;
+import com.example.demo.po.MPServerInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.AmqpTemplate;
@@ -35,10 +36,11 @@ public class RCGetRoomListTask extends SimpleTask implements Runnable {
         String client_id = jsonObject.getString("client_id");
         //根据用户ID获得所在会议室集合键：(key: AV_User_Room_[UserID])
         String userRoomKey = MQConstant.REDIS_USER_ROOM_KEY_PREFIX+client_id;
-        Set<Object> avRoomInfoSet = RedisUtils.sGet(redisTemplate, userRoomKey);
+        Map<Object, Object> userRoomsMap = RedisUtils.hmget(redisTemplate, userRoomKey);
+        Iterator<Map.Entry<Object, Object>> userRoom_iterator = userRoomsMap.entrySet().iterator();
         List<Map<String,Object>> roominfo_list = new ArrayList<>();
-        for(Object obj : avRoomInfoSet){
-            AVRoomInfo avRoomInfo = (AVRoomInfo)obj;
+        while(userRoom_iterator.hasNext()){
+            AVRoomInfo avRoomInfo = (AVRoomInfo)userRoom_iterator.next().getValue();
             Map<String,Object> room_info = new HashMap<>();
             room_info.put("room_id", avRoomInfo.getRoom_id());
             room_info.put("room_name", avRoomInfo.getRoom_name());
@@ -46,6 +48,7 @@ public class RCGetRoomListTask extends SimpleTask implements Runnable {
             room_info.put("create_time", avRoomInfo.getCreate_time());
             roominfo_list.add(room_info);
         }
+
         JSONArray room_list_array = JSONArray.parseArray(JSONObject.toJSONString(roominfo_list));
         JSONObject responseMsg = new JSONObject();
         responseMsg.put("type",RCCreateRoomTask.taskResType);

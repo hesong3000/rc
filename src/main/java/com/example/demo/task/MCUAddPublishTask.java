@@ -41,9 +41,8 @@ public class MCUAddPublishTask extends SimpleTask implements Runnable{
         String room_id = requestMsg.getString("room_id");
         String client_id = requestMsg.getString("client_id");
         String stream_id = requestMsg.getString("stream_id");
-        String client_bindkey = requestMsg.getString("client_bindkey");
         JSONObject jsonOption = requestMsg.getJSONObject("options");
-        if(room_id==null||client_id==null||stream_id==null||jsonOption==null||client_bindkey==null){
+        if(room_id==null||client_id==null||stream_id==null||jsonOption==null){
             log.error("{} params invalid, msg: {}", MCUAddPublishTask.taskType,msg);
             return AVErrorType.ERR_PARAM_REQUEST;
         }
@@ -123,6 +122,8 @@ public class MCUAddPublishTask extends SimpleTask implements Runnable{
             return AVErrorType.ERR_MCURES_NOT_ENOUGH;
 
         //将AddPublish请求发送至选定的MCU
+        String client_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+client_id;
+        requestMsg.put("client_bindkey", client_bindkey);
         log.info("mq send to mcu {}: {}", desired_mp_bindingkey,requestMsg);
         rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, desired_mp_bindingkey, requestMsg);
         return AVErrorType.ERR_NOERROR;

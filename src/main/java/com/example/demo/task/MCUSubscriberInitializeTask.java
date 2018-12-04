@@ -51,7 +51,7 @@ public class MCUSubscriberInitializeTask extends SimpleTask implements Runnable 
             removesub_msg.put("type", MCUSubscriberInitializeTask.taskFailedType);
             removesub_msg.put("client_id", client_id);
             removesub_msg.put("publish_stream_id", publish_stream_id);
-            log.info("mq send to mcu {}: {}", mcu_bindkey, removesub_msg);
+            log.info("{} offline mq send to mcu, {}: {}", mcu_bindkey, removesub_msg);
             rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mcu_bindkey, removesub_msg);
         }
     }

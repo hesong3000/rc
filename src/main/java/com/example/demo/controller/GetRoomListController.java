@@ -2,7 +2,6 @@ package com.example.demo.controller;
 
 import com.alibaba.fastjson.JSON;
 import com.example.demo.config.MQConstant;
-import com.example.demo.config.MQMessageType;
 import com.example.demo.task.RCGetRoomListTask;
 import org.springframework.amqp.core.AmqpTemplate;
 import org.springframework.beans.factory.annotation.Autowired;

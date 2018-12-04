@@ -38,15 +38,15 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
         String room_id = requestMsg.getString("room_id");
         String client_id = requestMsg.getString("client_id");
         String stream_id = requestMsg.getString("stream_id");
-        String client_bindkey = requestMsg.getString("client_bindkey");
         String publish_stream_id = requestMsg.getString("publish_stream_id");
         JSONObject jsonOption = requestMsg.getJSONObject("options");
-        if(room_id==null||client_id==null||stream_id==null||client_bindkey==null||publish_stream_id==null
+        if(room_id==null||client_id==null||stream_id==null||publish_stream_id==null
                 ||jsonOption==null){
             log.error("add_subscriber msg lack params, msg: {}",requestMsg);
             return AVErrorType.ERR_PARAM_REQUEST;
         }
-
+        result.client_id = client_id;
+        result.publish_stream_id = publish_stream_id;
         //检查会议室是否存在
         String avRoomsKey = MQConstant.REDIS_AVROOMS_KEY;
         String avRoomItem = MQConstant.REDIS_ROOM_KEY_PREFIX+room_id;
@@ -61,12 +61,12 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
             return AVErrorType.ERR_ROOM_KICK;
 
         //检查会议室中是否发布了此媒体流
-        if(avLogicRoom.getPublish_streams().containsKey(stream_id)==false){
+        if(avLogicRoom.getPublish_streams().containsKey(publish_stream_id)==false){
             return AVErrorType.ERR_STREAM_SHUTDOWN;
         }
 
         //获取处理该发布流的MCU信息
-        PublishStreamInfo publishStreamInfo = avLogicRoom.getPublish_streams().get(stream_id);
+        PublishStreamInfo publishStreamInfo = avLogicRoom.getPublish_streams().get(publish_stream_id);
         String mcu_id = publishStreamInfo.getStream_process_mcuid();
 
         //获取MCU信息
@@ -79,7 +79,6 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
             int remain_mcu_res = mpServerInfo.getMax_stream_count()-mpServerInfo.getReserve_stream_count()-mpServerInfo.getUserd_stream_count();
             if(remain_mcu_res<=0)
                 return AVErrorType.ERR_MCURES_NOT_ENOUGH;
-            mpServerInfo.setUserd_stream_count(mpServerInfo.getUserd_stream_count()+1);
         }
         //更新MCU信息
         if(RedisUtils.hset(redisTemplate, mcuinfos_key, mcuinfo_hashkey, mpServerInfo)==false){
@@ -88,6 +87,8 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
 
         //向MCU发送addSubscriber请求
         String mcu_bindkey = MQConstant.MQ_MCU_KEY_PREFIX+mcu_id;
+        String client_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+client_id;
+        requestMsg.put("client_bindkey", client_bindkey);
         log.info("mq send to mcu {}: {}", mcu_bindkey,requestMsg);
         rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mcu_bindkey, requestMsg);
         return AVErrorType.ERR_NOERROR;

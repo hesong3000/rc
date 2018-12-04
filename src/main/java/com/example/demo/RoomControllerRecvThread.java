@@ -2,10 +2,6 @@ package com.example.demo;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.example.demo.config.MQMessageType;
-import com.example.demo.task.RCCreateRoomTask;
-import com.example.demo.task.RCMPExpiredTask;
-import com.example.demo.task.RCUserConnectTask;
 import com.example.demo.task.SimpleTask;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -14,14 +10,9 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.context.ApplicationContext;
 import org.springframework.context.ApplicationContextAware;
 import org.springframework.data.redis.core.RedisTemplate;
-import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Component;
 
 import javax.annotation.Resource;
-import java.lang.reflect.Constructor;
-import java.lang.reflect.InvocationTargetException;
-import java.util.HashMap;
-import java.util.Map;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 

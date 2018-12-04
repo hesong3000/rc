@@ -84,7 +84,7 @@ public class RCCreateRoomTask extends SimpleTask implements Runnable {
             return AVErrorType.ERR_REDIS_STORE;
         }
 
-        //扩散写方式加入各用户的所在会议室集合键：(key: AV_User_Room_[UserID])
+        //扩散写方式加入各用户的所在会议室hash键：(key: AV_User_Room_[UserID] hashkey: roomId
         Iterator iter = userRoomToInsert.iterator();
         while(iter.hasNext()){
             AVRoomInfo avRoomInfo = new AVRoomInfo();
@@ -94,8 +94,12 @@ public class RCCreateRoomTask extends SimpleTask implements Runnable {
             avRoomInfo.setCreate_time(create_time.getTime());
             String client_id = (String)iter.next();
             String userRoomKey = MQConstant.REDIS_USER_ROOM_KEY_PREFIX+client_id;
-            if(RedisUtils.sSet(redisTemplate,userRoomKey,avRoomInfo)==0){
-                log.error("redis sset key: {} failed, value: {}", userRoomKey, avRoomInfo.toString());
+            String userroom_hashkey = room_id;
+            if(RedisUtils.hset(redisTemplate,userRoomKey,userroom_hashkey,avRoomInfo)==false){
+                log.error("redis hset failed, key: {}, hashkey: {}, value: {}",
+                        userRoomKey,
+                        userroom_hashkey,
+                        avRoomInfo);
                 continue;
             }
         }

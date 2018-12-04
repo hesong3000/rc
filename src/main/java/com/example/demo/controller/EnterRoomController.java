@@ -19,11 +19,17 @@ public class EnterRoomController {
     @ResponseBody
     public String enternRoom(){
         //for(int i = 0; i<99; i++) {
-            Map<String, String> map = new HashMap<String, String>();
-            map.put("type", RCEnterRoomTask.taskType);
-            map.put("room_id", "222222");
-            map.put("client_id", "client_1");
-            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, JSON.toJSON(map));
+        Map<String, String> map = new HashMap<String, String>();
+        map.put("type", RCEnterRoomTask.taskType);
+        map.put("room_id", "333333");
+        map.put("client_id", "client_3");
+        rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, JSON.toJSON(map));
+
+        Map<String, String> map_2 = new HashMap<String, String>();
+        map_2.put("type", RCEnterRoomTask.taskType);
+        map_2.put("room_id", "333333");
+        map_2.put("client_id", "client_2");
+        rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, JSON.toJSON(map_2));
         //}
         return "OK";
     }

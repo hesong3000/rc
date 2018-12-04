@@ -2,7 +2,6 @@ package com.example.demo.task;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
-import com.example.demo.config.AVErrorType;
 import com.example.demo.config.MQConstant;
 import com.example.demo.po.AVLogicRoom;
 import com.example.demo.po.RoomMemInfo;
