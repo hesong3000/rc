@@ -51,7 +51,7 @@ public class RCGetRoomListTask extends SimpleTask implements Runnable {
 
         JSONArray room_list_array = JSONArray.parseArray(JSONObject.toJSONString(roominfo_list));
         JSONObject responseMsg = new JSONObject();
-        responseMsg.put("type",RCCreateRoomTask.taskResType);
+        responseMsg.put("type",RCGetRoomListTask.taskResType);
         responseMsg.put("room_list",room_list_array);
         String send_routekey = MQConstant.MQ_CLIENT_KEY_PREFIX+client_id;
         log.info("mq send response {}: {}",send_routekey,responseMsg);

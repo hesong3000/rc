@@ -48,6 +48,7 @@ public class RCUserConnectTask extends SimpleTask implements Runnable{
         avUserInfo.setClient_name(client_name);
         avUserInfo.setBinding_key(binding_key);
 
+        expired = expired*2;    //键的过期间隔为注册间隔的两倍
         boolean ret = RedisUtils.set(redisTemplate,avUserItem, avUserInfo,expired);
         if(ret==false){
             log.error("insert user to redis failed, {}", avUserInfo.toString());

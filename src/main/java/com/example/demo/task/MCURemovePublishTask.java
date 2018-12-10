@@ -112,6 +112,7 @@ public class MCURemovePublishTask extends SimpleTask implements Runnable {
                         JSONObject stream_remove_notice = new JSONObject();
                         stream_remove_notice.put("type", MCURemovePublishTask.taskNotType);
                         stream_remove_notice.put("client_id", client_id);
+                        stream_remove_notice.put("room_id", avLogicRoom.getRoom_id());
                         stream_remove_notice.put("stream_id", stream_id);
                         log.info("mq send to client {}: {}", client_bindkey, stream_remove_notice);
                         rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, client_bindkey, stream_remove_notice);

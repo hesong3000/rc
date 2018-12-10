@@ -67,12 +67,14 @@ public class MCUFailMessageTask extends SimpleTask implements Runnable {
         //对MCU进行rollback操作
         int retcode = AVErrorType.ERR_NOERROR;
         JSONObject rollback_msg = new JSONObject();
+        Boolean isPublisher = false;
         if(avStreamInfo.getPublisher_id().compareTo(client_id)==0) {
             retcode = AVErrorType.ERR_STREAM_PUBLISH;
             //发送removePublish消息
             rollback_msg.put("type", MCUFailMessageTask.taskPublishRollback);
             rollback_msg.put("client_id", client_id);
             rollback_msg.put("stream_id", stream_id);
+            isPublisher = true;
         }
         else {
             retcode = AVErrorType.ERR_STREAM_SUBSCRIBE;
@@ -80,6 +82,7 @@ public class MCUFailMessageTask extends SimpleTask implements Runnable {
             rollback_msg.put("type", MCUFailMessageTask.taskSubscribRollback);
             rollback_msg.put("client_id", client_id);
             rollback_msg.put("publish_stream_id", stream_id);
+            isPublisher = false;
         }
         String mcu_bindkey = MQConstant.MQ_MCU_KEY_PREFIX+mcu_id;
         log.info("mq send to mcu {}: {}", mcu_bindkey,rollback_msg);
@@ -94,6 +97,7 @@ public class MCUFailMessageTask extends SimpleTask implements Runnable {
             client_fail_msg.put("type", MCUFailMessageTask.taskType);
             client_fail_msg.put("client_id", client_id);
             client_fail_msg.put("stream_id", stream_id);
+            client_fail_msg.put("is_publisher", isPublisher);
             client_fail_msg.put("retcode", retcode);
             log.info("mq send to client {}: {}", client_bindkey,client_fail_msg);
             rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, client_bindkey, client_fail_msg);

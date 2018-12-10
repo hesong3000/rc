@@ -3,6 +3,7 @@ package com.example.demo.task;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.example.demo.config.AVErrorType;
 import com.example.demo.config.MQConstant;
 import com.example.demo.po.*;
 import org.slf4j.Logger;
@@ -20,6 +21,7 @@ import java.util.*;
 public class RCDeleteRoomTask extends SimpleTask implements Runnable {
     private static Logger log = LoggerFactory.getLogger(RCDeleteRoomTask.class);
     public final static String taskType = "delete_room";
+    public final static String taskResType = "delete_room_response";
     public final static String taskRemovePublishTask = "remove_publisher";
     public final static String taskNotType = "room_delete_notice";
     @Autowired
@@ -47,21 +49,34 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
             return;
         }
 
+        int retcode = AVErrorType.ERR_NOERROR;
         //检查会议室是否存在
         String avRoomsKey = MQConstant.REDIS_AVROOMS_KEY;
         String avRoomItem = MQConstant.REDIS_ROOM_KEY_PREFIX+room_id;
         AVLogicRoom avLogicRoom = (AVLogicRoom)RedisUtils.hget(redisTemplate, avRoomsKey, avRoomItem);
         if(avLogicRoom == null){
             log.error("{}: failed, avroom not exist, key: {}, hashkey: {}",RCDeleteRoomTask.taskType, avRoomsKey,avRoomItem);
-            return;
+            retcode = AVErrorType.ERR_ROOM_NOTEXIST;
         }
 
         //检查会议室创建者是否为本用户
         String creator_id = avLogicRoom.getCreator_id();
         if(creator_id.compareTo(client_id)!=0){
             log.error("{}: failed, client is not the creator, msg:{}",RCDeleteRoomTask.taskType,msg);
-            return;
+            retcode = AVErrorType.ERR_ROOM_KICK;
         }
+
+        //向该用户发送
+        String request_client_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+client_id;
+        JSONObject response_msg = new JSONObject();
+        response_msg.put("type", RCDeleteRoomTask.taskResType);
+        response_msg.put("retcode", retcode);
+        response_msg.put("client_id", client_id);
+        response_msg.put("room_id", room_id);
+        rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, request_client_bindkey, response_msg);
+
+        if(retcode!=AVErrorType.ERR_NOERROR)
+            return;
 
         //查看发布流
         Map<String, Integer> process_mcu_map = new HashMap<>();
