@@ -2,7 +2,7 @@ spring:
     application:
         name: springboot-rabbitmq
     rabbitmq:
-        host: 10.25.16.115
+        host: 10.25.8.115
         port: 5672
         username: sdt
         password: sdt108

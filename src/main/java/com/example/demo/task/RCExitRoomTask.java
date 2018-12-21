@@ -57,6 +57,11 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
             return;
         }
 
+        //检查该成员是否已经退出会议室
+        RoomMemInfo curRoomMemInfo = avLogicRoom.getRoom_mems().get(request_client_id);
+        if(curRoomMemInfo.isMem_Online()==false)
+            return;
+
         //广播退出通知
         Iterator<Map.Entry<String, RoomMemInfo>> iterator = avLogicRoom.getRoom_mems().entrySet().iterator();
         while (iterator.hasNext()){
@@ -64,7 +69,7 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
             RoomMemInfo roomMemInfo = entry.getValue();
             String mem_id = roomMemInfo.getMem_id();
             boolean mem_online = roomMemInfo.isMem_Online();
-            if(mem_id == request_client_id || mem_online == false)
+            if(mem_id.compareTo(request_client_id) ==0 || mem_online == false)
                 continue;
             String mem_routingkey = MQConstant.MQ_CLIENT_KEY_PREFIX+mem_id;
             Map<String, String> map_res = new HashMap<String, String>();

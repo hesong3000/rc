@@ -115,7 +115,7 @@ public class RCEnterRoomTask extends SimpleTask implements Runnable{
             RoomMemInfo roomMemInfo = entry.getValue();
             String mem_id = roomMemInfo.getMem_id();
             boolean mem_online = roomMemInfo.isMem_Online();
-            if(mem_id == result.request_client_id || mem_online == false)
+            if(mem_id.compareTo(result.request_client_id)==0 || mem_online == false)
                 continue;
             String mem_routingkey = MQConstant.MQ_CLIENT_KEY_PREFIX+mem_id;
             Map<String, String> map_res = new HashMap<String, String>();

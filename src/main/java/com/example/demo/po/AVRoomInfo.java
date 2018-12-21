@@ -40,4 +40,14 @@ public class AVRoomInfo implements Serializable {
     }
 
     private long create_time = 0;
+
+    public int getMem_num() {
+        return mem_num;
+    }
+
+    public void setMem_num(int mem_num) {
+        this.mem_num = mem_num;
+    }
+
+    private int mem_num = 0;
 }

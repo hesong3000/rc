@@ -18,7 +18,7 @@ import java.util.Date;
 @Scope("prototype")
 public class MCUSubscriberReady extends SimpleTask implements Runnable {
     private static Logger log = LoggerFactory.getLogger(MCUSubscriberReady.class);
-    public final static String taskType = "subscriber_ready";
+    public final static String taskType = "subscribe_ready";
     public final static String taskFailType = "remove_subscriber";
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;

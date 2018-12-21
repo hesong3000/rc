@@ -92,6 +92,7 @@ public class RCCreateRoomTask extends SimpleTask implements Runnable {
             avRoomInfo.setRoom_name(room_name);
             avRoomInfo.setCreator_id(creator_id);
             avRoomInfo.setCreate_time(create_time.getTime());
+            avRoomInfo.setMem_num(room_mems.size());
             String client_id = (String)iter.next();
             String userRoomKey = MQConstant.REDIS_USER_ROOM_KEY_PREFIX+client_id;
             String userroom_hashkey = room_id;
@@ -160,12 +161,13 @@ public class RCCreateRoomTask extends SimpleTask implements Runnable {
             String userKey = MQConstant.REDIS_USER_KEY_PREFIX+mem_id;
             AVUserInfo avUserInfo = (AVUserInfo)RedisUtils.get(redisTemplate,userKey);
             if(avUserInfo!=null){
-                Map<String, String> map_res = new HashMap<String, String>();
+                Map<String, Object> map_res = new HashMap<String, Object>();
                 map_res.put("type", RCCreateRoomTask.taskNotType);
                 map_res.put("creator_id", avLogicRoom.getRoom_id());
                 map_res.put("invitor_id", avLogicRoom.getCreator_id());
-                map_res.put("room_id", avLogicRoom.getRoom_name());
+                map_res.put("room_id", avLogicRoom.getRoom_id());
                 map_res.put("room_name",avLogicRoom.getRoom_name());
+                map_res.put("mem_num",avLogicRoom.getRoom_mems().size());
                 log.info("mq send notice {}: {}", avUserInfo.getBinding_key(),JSON.toJSON(map_res));
                 rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, avUserInfo.getBinding_key(), JSON.toJSON(map_res));
             }else{

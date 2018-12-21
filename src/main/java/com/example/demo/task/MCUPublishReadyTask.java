@@ -116,7 +116,7 @@ public class MCUPublishReadyTask extends SimpleTask implements Runnable{
             RoomMemInfo notice_mem = entry.getValue();
             String mem_id = notice_mem.getMem_id();
             boolean mem_online = notice_mem.isMem_Online();
-            if(mem_id == client_id || mem_online == false)
+            if(mem_id.compareTo(client_id)==0 || mem_online == false)
                 continue;
             String mem_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+mem_id;
 

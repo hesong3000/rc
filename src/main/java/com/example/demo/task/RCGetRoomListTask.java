@@ -46,6 +46,7 @@ public class RCGetRoomListTask extends SimpleTask implements Runnable {
             room_info.put("room_name", avRoomInfo.getRoom_name());
             room_info.put("creator_id", avRoomInfo.getCreator_id());
             room_info.put("create_time", avRoomInfo.getCreate_time());
+            room_info.put("mem_num", avRoomInfo.getMem_num());
             roominfo_list.add(room_info);
         }
 

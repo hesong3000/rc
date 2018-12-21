@@ -48,9 +48,9 @@ public class MCUFailMessageTask extends SimpleTask implements Runnable {
             return;
         }
         String stream_id = fail_msg.getString("stream_id");
-        String options = fail_msg.getString("options");
+        String sub_type = fail_msg.getString("sub_type");
         String reason = fail_msg.getString("reason");
-        if(stream_id==null||options==null||reason==null){
+        if(stream_id==null||sub_type==null||reason==null){
             log.error("MCUFailMessageTask failmsg detail lack content, msg: {}",msg);
             return;
         }

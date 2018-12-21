@@ -20,7 +20,7 @@ import java.util.*;
 @Component(value= MCUMuteStreamTask.taskType)
 @Scope("prototype")
 public class MCUMuteStreamTask extends SimpleTask implements Runnable {
-    private static Logger log = LoggerFactory.getLogger(GetRoomStreamsRequest.class);
+    private static Logger log = LoggerFactory.getLogger(MCUMuteStreamTask.class);
     public final static String taskType = "mute_stream_request";
     public final static String taskResType = "mute_stream_response";
     public final static String taskNotType = "stream_muted_notice"; //只有publishstream的mute才会通知给会议的在线成员
