@@ -66,6 +66,16 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
             retcode = AVErrorType.ERR_ROOM_KICK;
         }
 
+        //检查当前会议室是否有用户正在会议中,此种状态不能删除
+        Iterator<Map.Entry<String, RoomMemInfo>> check_roommem_it = avLogicRoom.getRoom_mems().entrySet().iterator();
+        while(check_roommem_it.hasNext()){
+            RoomMemInfo roomMemInfo = check_roommem_it.next().getValue();
+            if(roomMemInfo.isMem_Online()==true){
+                retcode = AVErrorType.ERR_ROOM_BUSY;
+                break;
+            }
+        }
+
         //向该用户发送
         String request_client_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+client_id;
         JSONObject response_msg = new JSONObject();

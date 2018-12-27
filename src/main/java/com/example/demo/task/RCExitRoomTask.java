@@ -24,6 +24,7 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
     private static Logger log = LoggerFactory.getLogger(RCExitRoomTask.class);
     public final static String taskType = "exit_room";
     public final static String taskNotType = "room_memberout_notice";
+    public final static String deleteTaskType = "delete_room";
 
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
@@ -63,6 +64,7 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
             return;
 
         //广播退出通知
+        boolean isAllMemExit = true;
         Iterator<Map.Entry<String, RoomMemInfo>> iterator = avLogicRoom.getRoom_mems().entrySet().iterator();
         while (iterator.hasNext()){
             Map.Entry<String, RoomMemInfo> entry = iterator.next();
@@ -71,6 +73,8 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
             boolean mem_online = roomMemInfo.isMem_Online();
             if(mem_id.compareTo(request_client_id) ==0 || mem_online == false)
                 continue;
+            if(mem_online == true)
+                isAllMemExit = false;
             String mem_routingkey = MQConstant.MQ_CLIENT_KEY_PREFIX+mem_id;
             Map<String, String> map_res = new HashMap<String, String>();
             map_res.put("type", RCExitRoomTask.taskNotType);
@@ -82,9 +86,20 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
 
         //更新会议室成员状态，并重新存入redis
         avLogicRoom.getRoom_mems().get(request_client_id).setMem_Online(false);
+        RedisUtils.hdel(redisTemplate,avRoomsKey,avRoomItem);
         if(!RedisUtils.hset(redisTemplate,avRoomsKey,avRoomItem, avLogicRoom)){
             log.error("{}: redis hset avroom failed! {}",  RCExitRoomTask.taskType, avLogicRoom.toString());
             return;
+        }
+
+        //如果会议室只有两人,且都已退出,则自动发送删除会议室命令
+        if(isAllMemExit==true && avLogicRoom.getRoom_mems().size()==2){
+            JSONObject delete_room_msg = new JSONObject();
+            delete_room_msg.put("type", RCExitRoomTask.deleteTaskType);
+            delete_room_msg.put("client_id", avLogicRoom.getCreator_id());
+            delete_room_msg.put("room_id", avLogicRoom.getRoom_id());
+            log.info("mq send RC {}: {}",MQConstant.MQ_RC_BINDING_KEY,delete_room_msg);
+            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, delete_room_msg);
         }
     }
 }
