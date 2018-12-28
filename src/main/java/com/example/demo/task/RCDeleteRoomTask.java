@@ -70,7 +70,7 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
         Iterator<Map.Entry<String, RoomMemInfo>> check_roommem_it = avLogicRoom.getRoom_mems().entrySet().iterator();
         while(check_roommem_it.hasNext()){
             RoomMemInfo roomMemInfo = check_roommem_it.next().getValue();
-            if(roomMemInfo.isMem_Online()==true){
+            if(roomMemInfo.isMem_Online()==true && client_id.compareTo(roomMemInfo.getMem_id())!=0){
                 retcode = AVErrorType.ERR_ROOM_BUSY;
                 break;
             }
@@ -83,7 +83,8 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
         response_msg.put("retcode", retcode);
         response_msg.put("client_id", client_id);
         response_msg.put("room_id", room_id);
-        rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, request_client_bindkey, response_msg);
+        if(avLogicRoom.getRoom_mems().size()>2)
+            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, request_client_bindkey, response_msg);
 
         if(retcode!=AVErrorType.ERR_NOERROR)
             return;
@@ -137,6 +138,7 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
         notice_msg.put("type", RCDeleteRoomTask.taskNotType);
         notice_msg.put("room_id", avLogicRoom.getRoom_id());
 
+        int room_memnum = avLogicRoom.getRoom_mems().size();
         Iterator<Map.Entry<String, RoomMemInfo>> roommem_it = avLogicRoom.getRoom_mems().entrySet().iterator();
         while(roommem_it.hasNext()){
             RoomMemInfo roomMemInfo = roommem_it.next().getValue();
@@ -146,7 +148,8 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
             RedisUtils.hdel(redisTemplate,avuserroom_key,avroom_hashkey);
 
             //向在线用户发送会议室删除通知
-            if(roomMemInfo.getMem_id().compareTo(client_id)!=0 && roomMemInfo.isMem_Online()==true){
+            if(roomMemInfo.getMem_id().compareTo(client_id)!=0 && roomMemInfo.isMem_Online()==true
+                    && (room_memnum>2)){
                 String client_sendkey = MQConstant.MQ_CLIENT_KEY_PREFIX+roomMemInfo.getMem_id();
                 log.info("mq send to client {}: {}", client_sendkey, notice_msg);
                 rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, client_sendkey, notice_msg);
