@@ -21,16 +21,16 @@ public class ConnectUserController {
         map.put("client_id", "client_2");
         map.put("client_name", "user_2");
         map.put("binding_key", "client_2_binding_key");
-        map.put("expired", 0);
+        map.put("expired", 10);
         rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, JSON.toJSON(map));
 
-        Map<String, Object> map_1 = new HashMap<String, Object>();
-        map_1.put("type", RCUserConnectTask.taskType);
-        map_1.put("client_id", "client_1");
-        map_1.put("client_name", "user_1");
-        map_1.put("binding_key", "client_1_binding_key");
-        map_1.put("expired", 0);
-        rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, JSON.toJSON(map_1));
+//        Map<String, Object> map_1 = new HashMap<String, Object>();
+//        map_1.put("type", RCUserConnectTask.taskType);
+//        map_1.put("client_id", "client_1");
+//        map_1.put("client_name", "user_1");
+//        map_1.put("binding_key", "client_1_binding_key");
+//        map_1.put("expired", 0);
+//        rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, JSON.toJSON(map_1));
         return "OK";
     }
 

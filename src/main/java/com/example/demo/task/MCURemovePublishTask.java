@@ -1,12 +1,12 @@
 package com.example.demo.task;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.example.demo.config.AVErrorType;
+import com.example.demo.config.DomainDefineBean;
 import com.example.demo.config.MQConstant;
-import com.example.demo.po.AVLogicRoom;
-import com.example.demo.po.MPServerInfo;
-import com.example.demo.po.PublishStreamInfo;
-import com.example.demo.po.RoomMemInfo;
+import com.example.demo.po.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.AmqpTemplate;
@@ -15,9 +15,7 @@ import org.springframework.context.annotation.Scope;
 import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
-import java.util.Date;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 @Component(value= MCURemovePublishTask.taskType)
 @Scope("prototype")
@@ -29,6 +27,8 @@ public class MCURemovePublishTask extends SimpleTask implements Runnable {
     private RedisTemplate<String, Object> redisTemplate;
     @Autowired
     private AmqpTemplate rabbitTemplate;
+    @Autowired
+    DomainDefineBean domainBean;
 
     @Override
     public void run() {
@@ -43,9 +43,27 @@ public class MCURemovePublishTask extends SimpleTask implements Runnable {
         JSONObject requestMsg = JSON.parseObject(msg);
         String client_id = requestMsg.getString("client_id");
         String room_id = requestMsg.getString("room_id");
+        String room_domain = requestMsg.getString("room_domain");
         String stream_id = requestMsg.getString("stream_id");
-        if(client_id==null||room_id==null||stream_id==null){
+        if(client_id==null||room_id==null||stream_id==null||room_domain==null){
             log.error("remove_publisher msg lack params, msg: {}", msg);
+            return;
+        }
+
+        if(room_domain.compareTo(domainBean.getSrcDomain())!=0){
+            //跨域发送至room域
+            DomainRoute domainRoute = domainBean.getDstDomainRoute(room_domain);
+            if(domainRoute==null){
+                log.warn("{} send msg failed while can not find available domain route to {}, msg: {}",
+                        MCURemovePublishTask.taskType, room_domain, requestMsg);
+                return;
+            }
+            List<DomainRoute> new_domain_list = new LinkedList<>();
+            new_domain_list.add(domainRoute);
+            JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));
+            requestMsg.put("domain_route", domain_array);
+            log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, requestMsg);
+            rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", requestMsg);
             return;
         }
 
@@ -70,23 +88,57 @@ public class MCURemovePublishTask extends SimpleTask implements Runnable {
             PublishStreamInfo publishStreamInfo = avLogicRoom.getPublish_streams().get(stream_id);
             if(publishStreamInfo.getPublish_clientid().compareTo(client_id)==0){
                 //向MCU发送removePublish请求
-                String mcu_id = publishStreamInfo.getStream_process_mcuid();
-                String mcu_key = MQConstant.MQ_MCU_KEY_PREFIX+mcu_id;
-                log.info("mq send to mcu {}: {}", mcu_key,requestMsg);
-                rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mcu_key, requestMsg);
-                //检查此项发布流的移除会减少的mcu使用路数(发布流路数1和订阅此流的订阅流路数)
-                int stream_reduce = 1+publishStreamInfo.getSubscribers().size();
+                Map<String, List<MPServerInfo>> publishStream_resources = publishStreamInfo.getPublish_stream_resources();
+                Iterator<Map.Entry<String, List<MPServerInfo>>> resource_iter = publishStream_resources.entrySet().iterator();
+                while(resource_iter.hasNext()){
+                    Map.Entry<String, List<MPServerInfo>> entry = resource_iter.next();
+                    List<MPServerInfo> mpServerInfos = entry.getValue();
+                    int mpServerInfos_size = mpServerInfos.size();
+                    for(int mcu_index=0;mcu_index<mpServerInfos_size;mcu_index++) {
+                        MPServerInfo mcu_info = mpServerInfos.get(mcu_index);
+                        if(mcu_info.getSrc_domain().compareTo(domainBean.getSrcDomain())==0){
+                            String mcu_id = mcu_info.getMp_id();
+                            String mcu_key = MQConstant.MQ_MCU_KEY_PREFIX+mcu_id;
+                            log.info("mq send to mcu {}: {}", mcu_key,requestMsg);
+                            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mcu_key, requestMsg);
+                            //检查此项发布流的移除会减少的mcu使用路数(发布流路数1和订阅此流的订阅流路数)
+                            int stream_reduce = 0;
+                            if(mcu_info.isEmcu()==false)
+                                stream_reduce = 1+publishStreamInfo.getSubscribers().size();
+                            else
+                                stream_reduce = 1;
+                            //更新hash键AV_MPs的mcu使用率
+                            String mcu_hashkey = MQConstant.REDIS_MP_ROOM_KEY_PREFIX+mcu_id;
+                            MPServerInfo mpServerInfo = (MPServerInfo)RedisUtils.hget(redisTemplate, MQConstant.REDIS_MPINFO_HASH_KEY,mcu_hashkey);
+                            if(mpServerInfo!=null){
+                                mpServerInfo.releaseMcuUseResource(room_id,stream_reduce);
+                                if(RedisUtils.hset(redisTemplate, MQConstant.REDIS_MPINFO_HASH_KEY, mcu_hashkey, mpServerInfo)==false){
+                                    log.error("redis hset failed, key: {}, hashkey: {}, value: {}",
+                                            MQConstant.REDIS_MPINFO_HASH_KEY,
+                                            mcu_hashkey,
+                                            mpServerInfo);
+                                }
+                            }
+                        }else{
+                            //跨域发送至mcu
+                            DomainRoute domainRoute = domainBean.getDstDomainRoute(mcu_info.getSrc_domain());
+                            if(domainRoute==null){
+                                log.warn("{} send msg failed while can not find available domain route to {}, msg: {}",
+                                        MCUMuteStreamTask.taskType, mcu_info.getSrc_domain(), requestMsg);
+                                return;
+                            }
 
-                //更新hash键AV_MPs的mcu使用率
-                String mcu_hashkey = MQConstant.REDIS_MP_ROOM_KEY_PREFIX+mcu_id;
-                MPServerInfo mpServerInfo = (MPServerInfo)RedisUtils.hget(redisTemplate, MQConstant.REDIS_MPINFO_HASH_KEY,mcu_hashkey);
-                if(mpServerInfo!=null){
-                    mpServerInfo.setUserd_stream_count(mpServerInfo.getUserd_stream_count()-stream_reduce);
-                    if(RedisUtils.hset(redisTemplate, MQConstant.REDIS_MPINFO_HASH_KEY, mcu_hashkey, mpServerInfo)==false){
-                        log.error("redis hset failed, key: {}, hashkey: {}, value: {}",
-                                MQConstant.REDIS_MPINFO_HASH_KEY,
-                                mcu_hashkey,
-                                mpServerInfo);
+                            JSONObject crossDomainmsg = new JSONObject();
+                            crossDomainmsg.put("type", CDCrossDomainToMCUTask.taskType);
+                            crossDomainmsg.put("mcu_id", mcu_info.getMp_id());
+                            crossDomainmsg.put("encap_msg", requestMsg);
+                            List<DomainRoute> new_domain_list = new LinkedList<>();
+                            new_domain_list.add(domainRoute);
+                            JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));
+                            crossDomainmsg.put("domain_route", domain_array);
+                            log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, crossDomainmsg);
+                            rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", crossDomainmsg);
+                        }
                     }
                 }
 

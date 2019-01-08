@@ -51,7 +51,9 @@ public class AVLogicRoom implements Serializable {
     }
 
     public void setRoom_mems(Map<String, RoomMemInfo> room_mems) {
-        this.room_mems = room_mems;
+        //this.room_mems = room_mems;
+        this.room_mems.clear();
+        this.room_mems.putAll(room_mems);
     }
 
     public Map<String, PublishStreamInfo> getPublish_streams() {
@@ -59,7 +61,9 @@ public class AVLogicRoom implements Serializable {
     }
 
     public void setPublish_streams(Map<String, PublishStreamInfo> publish_streams) {
-        this.publish_streams = publish_streams;
+        //this.publish_streams = publish_streams;
+        this.publish_streams.clear();
+        this.publish_streams.putAll(publish_streams);
     }
 
     public Map<String, CascadeStreamInfo> getCascade_streams() {
@@ -67,6 +71,18 @@ public class AVLogicRoom implements Serializable {
     }
 
     public void setCascade_streams(Map<String, CascadeStreamInfo> cascade_streams) {
-        this.cascade_streams = cascade_streams;
+        //this.cascade_streams = cascade_streams;
+        this.cascade_streams.clear();
+        this.cascade_streams.putAll(cascade_streams);
     }
+
+    public String getRoom_domain() {
+        return room_domain;
+    }
+
+    public void setRoom_domain(String room_domain) {
+        this.room_domain = room_domain;
+    }
+
+    private String room_domain = "";
 }

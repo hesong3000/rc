@@ -42,7 +42,7 @@ public class MCUPublishInitializeTask extends SimpleTask implements Runnable{
 
         if(avUserInfo!=null){
             String client_bindkey = avUserInfo.getBinding_key();
-            log.info("mq send response {}: {}", client_bindkey,jsonObject);
+            log.info("mq send to client {}: {}", client_bindkey,jsonObject);
             rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, client_bindkey, jsonObject);
         }else{
             //客户端下线，removePublish到MCU

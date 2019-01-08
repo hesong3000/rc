@@ -1,9 +1,12 @@
 package com.example.demo.task;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
+import com.example.demo.config.DomainDefineBean;
 import com.example.demo.config.MQConstant;
 import com.example.demo.po.AVRoomInfo;
+import com.example.demo.po.DomainRoute;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.AmqpTemplate;
@@ -24,17 +27,38 @@ public class RCPurgeResourceTask extends SimpleTask implements Runnable{
     private RedisTemplate<String, Object> redisTemplate;
     @Autowired
     private AmqpTemplate rabbitTemplate;
+    @Autowired
+    DomainDefineBean domainBean;
 
     @Override
     public void run() {
         /*
-            遍历用户所在的全部会议室，进行退会操作即可
+            遍历用户所在的全部会议室，进行退会操作即可，进行广播
          */
         log.info("execute RCPurgeResourceTask at {}", new Date());
         JSONObject requestMsg = JSON.parseObject(msg);
         String client_id = requestMsg.getString("client_id");
+        boolean is_inner_msg = false;
+        if(requestMsg.containsKey("src_domain")==false)
+            is_inner_msg = true;
+
+        if(is_inner_msg == true){
+            //广播此消息
+            requestMsg.put("src_domain",domainBean.getSrcDomain());
+            List<DomainRoute> new_domain_list = new LinkedList<>();
+            DomainRoute domainRoute = domainBean.getBroadcastDomainRoute();
+            new_domain_list.add(domainRoute);
+            JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));
+            requestMsg.put("domain_route", domain_array);
+            log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, requestMsg);
+            rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", requestMsg);
+        }
+
         String userRoomKey = MQConstant.REDIS_USER_ROOM_KEY_PREFIX+client_id;
         Map<Object, Object> userRoomsMap = RedisUtils.hmget(redisTemplate, userRoomKey);
+        if(userRoomsMap==null)
+            return;
+
         Iterator<Map.Entry<Object, Object>> userRoom_iterator = userRoomsMap.entrySet().iterator();
         while(userRoom_iterator.hasNext()){
             AVRoomInfo avRoomInfo = (AVRoomInfo)userRoom_iterator.next().getValue();

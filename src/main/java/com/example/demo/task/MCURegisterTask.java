@@ -31,6 +31,7 @@ public class MCURegisterTask extends SimpleTask implements Runnable {
     @Override
     @Transactional
     public void run() {
+        //此接口仅在域内部使用
         log.info("execute MCURegisterTask at {}", new Date());
         JSONObject jsonObject = JSON.parseObject(msg);
         String mcu_id = jsonObject.getString("mcu_id");
@@ -38,10 +39,24 @@ public class MCURegisterTask extends SimpleTask implements Runnable {
         Integer max_stream_count = jsonObject.getInteger("max_stream_count");
         String binding_key = jsonObject.getString("binding_key");
         Integer reserve_stream_count = jsonObject.getInteger("reserve_stream_count");
-        if(mcu_id==null||expired==null||max_stream_count==null||binding_key==null||reserve_stream_count==null){
+        //该MCU是否为外域级联mcu
+        Boolean isEmcu = jsonObject.getBoolean("isEmcu");
+        if(mcu_id==null||expired==null||max_stream_count==null||binding_key==null||reserve_stream_count==null||isEmcu==null){
             log.error("{} params invalid, msg: {}",MCURegisterTask.taskType,msg);
             return;
         }
+
+        String src_domain = null;
+        String aval_domain = null;
+        if(isEmcu==true){
+            src_domain = jsonObject.getString("src_domain");
+            aval_domain = jsonObject.getString("aval_domain");
+            if(src_domain==null||aval_domain==null){
+                log.error("{} lack src_domain or aval_domain value, msg: {}", MCURegisterTask.taskType, msg);
+                return;
+            }
+        }
+
 
         String mcu_key = MQConstant.REDIS_MP_KEY_PREFIX+mcu_id;
         //更新普通键AV_MP：[MPID]的过期时间
@@ -60,7 +75,11 @@ public class MCURegisterTask extends SimpleTask implements Runnable {
             mpServerInfo.setMp_id(mcu_id);
             mpServerInfo.setMax_stream_count(max_stream_count);
             mpServerInfo.setReserve_stream_count(reserve_stream_count);
-            mpServerInfo.setUserd_stream_count(0);
+            mpServerInfo.setEmcu(isEmcu);
+            if(isEmcu==true) {
+                mpServerInfo.setSrc_domain(src_domain);
+                mpServerInfo.setAval_domain(aval_domain);
+            }
         }
         if(!RedisUtils.hset(redisTemplate,avMPs_key,avMP_item,mpServerInfo)){
             log.error("redis hset failed, key: {}, item: {}, value: {}",avMPs_key,avMP_item,mpServerInfo.toString());

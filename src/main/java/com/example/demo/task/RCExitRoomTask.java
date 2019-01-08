@@ -1,11 +1,14 @@
 package com.example.demo.task;
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.alibaba.fastjson.serializer.SerializerFeature;
 import com.example.demo.config.AVErrorType;
+import com.example.demo.config.DomainDefineBean;
 import com.example.demo.config.MQConstant;
 import com.example.demo.po.AVLogicRoom;
+import com.example.demo.po.DomainRoute;
 import com.example.demo.po.RoomMemInfo;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -16,10 +19,7 @@ import org.springframework.data.redis.core.RedisTemplate;
 import org.springframework.stereotype.Component;
 
 import java.nio.charset.Charset;
-import java.util.Date;
-import java.util.HashMap;
-import java.util.Iterator;
-import java.util.Map;
+import java.util.*;
 
 @Component(value=RCExitRoomTask.taskType)
 @Scope("prototype")
@@ -28,11 +28,12 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
     public final static String taskType = "exit_room";
     public final static String taskNotType = "room_memberout_notice";
     public final static String deleteTaskType = "delete_room";
-
     @Autowired
     private AmqpTemplate rabbitTemplate;
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
+    @Autowired
+    DomainDefineBean domainBean;
 
     @Override
     public void run() {
@@ -52,12 +53,39 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
     private int processRequest(JSONObject requestMsg, Result result){
         String request_room_id = requestMsg.getString("room_id");
         String request_client_id = requestMsg.getString("client_id");
-        if(request_room_id == null || request_client_id == null){
+        String room_domain = requestMsg.getString("room_domain");
+        String request_client_domain = "";
+        if(request_room_id == null || request_client_id == null||room_domain==null){
             log.error("{}: request msg invalid, msg: {}", RCExitRoomTask.taskType, requestMsg);
             return AVErrorType.ERR_PARAM_REQUEST;
         }
+
+        if(requestMsg.containsKey("src_domain")==true)
+            request_client_domain = requestMsg.getString("src_domain");
+        else
+            request_client_domain = domainBean.getSrcDomain();
+
+        result.request_client_domain = request_client_domain;
         result.request_client_id = request_client_id;
         result.request_room_id = request_room_id;
+        result.room_domain = room_domain;
+
+        if(room_domain.compareTo(domainBean.getSrcDomain())!=0){
+            DomainRoute domainRoute = domainBean.getDstDomainRoute(result.room_domain);
+            if(domainRoute==null){
+                log.warn("{} send msg failed while can not find available domain route to {}, msg: {}",
+                        RCExitRoomTask.taskType, room_domain, requestMsg);
+                return AVErrorType.ERR_ROUTE_NOTEXIST;
+            }
+            List<DomainRoute> new_domain_list = new LinkedList<>();
+            new_domain_list.add(domainRoute);
+            JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));
+            requestMsg.put("src_domain", domainBean.getSrcDomain());
+            requestMsg.put("domain_route", domain_array);
+            log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, requestMsg);
+            rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", requestMsg);
+            return AVErrorType.ERR_NOERROR;
+        }
 
         //检查会议室是否存在
         String avRoomsKey = MQConstant.REDIS_AVROOMS_KEY;
@@ -76,16 +104,11 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
             return AVErrorType.ERR_ROOM_KICK;
         }
 
-        //检查该成员是否已经退出会议室
-        RoomMemInfo curRoomMemInfo = avLogicRoom.getRoom_mems().get(request_client_id);
-        if(curRoomMemInfo.isMem_Online()==false)
-            return AVErrorType.ERR_ROOM_KICK;
-
         result.room_memnum = avLogicRoom.getRoom_mems().size();
         result.creator_id = avLogicRoom.getCreator_id();
 
         //更新会议室成员状态，并重新存入redis
-        curRoomMemInfo.setMem_Online(false);
+        avLogicRoom.getRoom_mems().get(request_client_id).setMem_Online(false);
         if(!RedisUtils.hset(redisTemplate,avRoomsKey,avRoomItem, avLogicRoom)){
             log.error("{}: redis hset avroom failed! {}",  RCExitRoomTask.taskType, avLogicRoom.toString());
             return AVErrorType.ERR_REDIS_STORE;
@@ -96,6 +119,8 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
     private int sendNotice(int processCode, Result result){
         if(processCode != AVErrorType.ERR_NOERROR)
             return -1;
+        if(result.room_domain.compareTo(domainBean.getSrcDomain())!=0)
+            return -1;
         //广播退出通知
         boolean isAllMemExit = true;
         Iterator<Map.Entry<String, RoomMemInfo>> iterator = result.avLogicRoom.getRoom_mems().entrySet().iterator();
@@ -104,25 +129,52 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
             RoomMemInfo roomMemInfo = entry.getValue();
             String mem_id = roomMemInfo.getMem_id();
             boolean mem_online = roomMemInfo.isMem_Online();
+            String mem_domain = roomMemInfo.getMem_domain();
             if(mem_id.compareTo(result.request_client_id) ==0 || mem_online == false)
                 continue;
             if(mem_online == true)
                 isAllMemExit = false;
-            String mem_routingkey = MQConstant.MQ_CLIENT_KEY_PREFIX+mem_id;
-            Map<String, String> map_res = new HashMap<String, String>();
-            map_res.put("type", RCExitRoomTask.taskNotType);
-            map_res.put("room_id", result.avLogicRoom.getRoom_id());
-            map_res.put("client_id", result.request_client_id);
-            log.info("mq send notice {}: {}",mem_routingkey,JSON.toJSON(map_res));
-            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mem_routingkey, JSON.toJSON(map_res));
+            JSONObject notice_msg = new JSONObject();
+            notice_msg.put("type", RCExitRoomTask.taskNotType);
+            notice_msg.put("room_id", result.avLogicRoom.getRoom_id());
+            notice_msg.put("client_id", result.request_client_id);
+            if(mem_domain.compareTo(domainBean.getSrcDomain())==0){
+                //本域直接发送至客户端
+                String mem_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+mem_id;
+                log.info("mq send notice {}: {}",mem_bindkey,notice_msg);
+                rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mem_bindkey, notice_msg);
+            }else{
+                //非本域则跨域通知
+                DomainRoute domainRoute = domainBean.getDstDomainRoute(mem_domain);
+                if(domainRoute!=null){
+                    JSONObject crossDomainmsg = new JSONObject();
+                    crossDomainmsg.put("type", CDStreamAddNoticeTask.taskType);
+                    crossDomainmsg.put("room_domain", result.avLogicRoom.getRoom_domain());
+                    crossDomainmsg.put("notice_client_id", mem_id);
+                    crossDomainmsg.put("notice_msg", notice_msg);
+                    List<DomainRoute> new_domain_list = new LinkedList<>();
+                    new_domain_list.add(domainRoute);
+                    JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));
+                    crossDomainmsg.put("domain_route", domain_array);
+                    log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, crossDomainmsg);
+                    rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", crossDomainmsg);
+                }else{
+                    log.warn("{} send msg failed while can not find available domain route to {}, msg: {}",
+                            MCUPublishReadyTask.taskNotType, mem_domain, notice_msg);
+                }
+            }
         }
         result.isAllMemExit = isAllMemExit;
         return processCode;
     }
 
     private int processFollow(int processCode, Result result){
+
         if(processCode!=AVErrorType.ERR_NOERROR)
             return processCode;
+        if(result.room_domain.compareTo(domainBean.getSrcDomain())!=0)
+            return processCode;
+
         if(result.isAllMemExit==true && result.room_memnum==2){
             JSONObject delete_room_msg = new JSONObject();
             delete_room_msg.put("type", RCExitRoomTask.deleteTaskType);
@@ -137,6 +189,8 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
     class Result{
         String request_room_id = "";
         String request_client_id = "";
+        String request_client_domain = "";
+        String room_domain = "";
         boolean isAllMemExit = false;
         int room_memnum = 0;
         String creator_id = "";

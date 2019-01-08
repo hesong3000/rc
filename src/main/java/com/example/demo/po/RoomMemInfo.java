@@ -50,4 +50,14 @@ public class RoomMemInfo implements Serializable {
     public void setSubscribe_streams(Map<String, String> subscribe_streams) {
         this.subscribe_streams = subscribe_streams;
     }
+
+    public String getMem_domain() {
+        return mem_domain;
+    }
+
+    public void setMem_domain(String mem_domain) {
+        this.mem_domain = mem_domain;
+    }
+
+    private String mem_domain = "";
 }

@@ -4,11 +4,9 @@ import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.example.demo.config.AVErrorType;
+import com.example.demo.config.DomainDefineBean;
 import com.example.demo.config.MQConstant;
-import com.example.demo.po.AVLogicRoom;
-import com.example.demo.po.AVRoomInfo;
-import com.example.demo.po.AVUserInfo;
-import com.example.demo.po.RoomMemInfo;
+import com.example.demo.po.*;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.amqp.core.AmqpTemplate;
@@ -31,6 +29,8 @@ public class RCCreateRoomTask extends SimpleTask implements Runnable {
     private RedisTemplate<String, Object> redisTemplate;
     @Autowired
     private AmqpTemplate rabbitTemplate;
+    @Autowired
+    DomainDefineBean domainBean;
 
     /*
         1、处理create_room的请求消息，加入hash表: AV_Rooms的item: AV_Room_[RoomID]
@@ -58,6 +58,7 @@ public class RCCreateRoomTask extends SimpleTask implements Runnable {
         }
         Date create_time = new Date();
         avLogicRoom.setCreate_time(create_time);
+        avLogicRoom.setRoom_domain(domainBean.getSrcDomain());
         Map<String, RoomMemInfo> room_mems = new HashMap<>();
         JSONArray user_list = requestMsg.getJSONArray("mem_list");
         List<String> userRoomToInsert = new LinkedList<>();
@@ -69,6 +70,7 @@ public class RCCreateRoomTask extends SimpleTask implements Runnable {
             roomMemInfo.setMem_name(user_name);
             if(creator_id.compareTo(client_id)==0){
                 roomMemInfo.setMem_Online(true);
+                roomMemInfo.setMem_domain(domainBean.getSrcDomain());
             }else{
                 roomMemInfo.setMem_Online(false);
             }
@@ -107,7 +109,7 @@ public class RCCreateRoomTask extends SimpleTask implements Runnable {
         return AVErrorType.ERR_NOERROR;
     }
 
-    //发送room_create_reponse逻辑
+    //发送room_create_reponse逻辑，只能在本域创建会议，但可邀请外域成员，因此创建会议响应只需回复到本域，不涉及跨域操作
     private int sendResponse(int processCode, Result result){
         JSONObject responseMsg = new JSONObject();
         responseMsg.put("type",RCCreateRoomTask.taskResType);
@@ -118,6 +120,7 @@ public class RCCreateRoomTask extends SimpleTask implements Runnable {
             responseMsg.put("room_name", avLogicRoom.getRoom_name());
             responseMsg.put("creator_id", avLogicRoom.getCreator_id());
             responseMsg.put("create_time", avLogicRoom.getCreate_time().getTime());
+            responseMsg.put("room_domain", avLogicRoom.getRoom_domain());
             List<Map<String,Object>> mem_list = new ArrayList<>();
             Iterator<Map.Entry<String, RoomMemInfo>> iterator = avLogicRoom.getRoom_mems().entrySet().iterator();
             while (iterator.hasNext()) {
@@ -161,15 +164,39 @@ public class RCCreateRoomTask extends SimpleTask implements Runnable {
             String userKey = MQConstant.REDIS_USER_KEY_PREFIX+mem_id;
             AVUserInfo avUserInfo = (AVUserInfo)RedisUtils.get(redisTemplate,userKey);
             if(avUserInfo!=null){
-                Map<String, Object> map_res = new HashMap<String, Object>();
-                map_res.put("type", RCCreateRoomTask.taskNotType);
-                map_res.put("creator_id", avLogicRoom.getRoom_id());
-                map_res.put("invitor_id", avLogicRoom.getCreator_id());
-                map_res.put("room_id", avLogicRoom.getRoom_id());
-                map_res.put("room_name",avLogicRoom.getRoom_name());
-                map_res.put("mem_num",avLogicRoom.getRoom_mems().size());
-                log.info("mq send notice {}: {}", avUserInfo.getBinding_key(),JSON.toJSON(map_res));
-                rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, avUserInfo.getBinding_key(), JSON.toJSON(map_res));
+                JSONObject response_msg = new JSONObject();
+                response_msg.put("type", RCCreateRoomTask.taskNotType);
+                response_msg.put("creator_id", avLogicRoom.getCreator_id());
+                response_msg.put("invitor_id", avLogicRoom.getCreator_id());
+                response_msg.put("room_id", avLogicRoom.getRoom_id());
+                response_msg.put("room_name", avLogicRoom.getRoom_name());
+                response_msg.put("room_domain", avLogicRoom.getRoom_domain());
+                response_msg.put("mem_num", avLogicRoom.getRoom_mems().size());
+                //若用户属于本域，则直接发送
+                if(avUserInfo.getSrc_domain().compareTo(domainBean.getSrcDomain())==0){
+                    log.info("mq send to client {}: {}", avUserInfo.getBinding_key(),response_msg);
+                    rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, avUserInfo.getBinding_key(), response_msg);
+                }else{
+                    //若用户不属于本域，则通过远端RC转发
+                    String client_dst_domain = avUserInfo.getSrc_domain();
+                    DomainRoute domainRoute = domainBean.getDstDomainRoute(client_dst_domain);
+                    if(domainRoute==null){
+                        log.warn("{} send msg failed while can not find avilable domainroute to {}, msg: {}",
+                                RCCreateRoomTask.taskNotType, client_dst_domain, response_msg);
+                        continue;
+                    }
+
+                    JSONObject crossDomainmsg = new JSONObject();
+                    crossDomainmsg.put("type", CDCrossDomainMsgTask.taskType);
+                    crossDomainmsg.put("client_id", mem_id);
+                    crossDomainmsg.put("encap_msg", response_msg);
+                    List<DomainRoute> new_domain_list = new LinkedList<>();
+                    new_domain_list.add(domainRoute);
+                    JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));
+                    crossDomainmsg.put("domain_route", domain_array);
+                    log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, crossDomainmsg);
+                    rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", crossDomainmsg);
+                }
             }else{
                 log.info("send room_invite_notice ignore, while user: {} is offline", mem_id);
             }

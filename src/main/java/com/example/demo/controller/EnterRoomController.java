@@ -1,7 +1,9 @@
 package com.example.demo.controller;
 
 import com.alibaba.fastjson.JSON;
+import com.example.demo.config.DomainDefineBean;
 import com.example.demo.config.MQConstant;
+import com.example.demo.po.DomainRoute;
 import com.example.demo.task.RCEnterRoomTask;
 import com.example.demo.task.RCUserConnectTask;
 import org.springframework.amqp.core.AmqpTemplate;
@@ -18,6 +20,8 @@ public class EnterRoomController {
     @RequestMapping("/enterroom")
     @ResponseBody
     public String enternRoom(){
+
+        DomainRoute domainRoute = domainBean.getDstDomainRoute("domain_161");
         //for(int i = 0; i<99; i++) {
         Map<String, String> map = new HashMap<String, String>();
         map.put("type", RCEnterRoomTask.taskType);
@@ -36,4 +40,7 @@ public class EnterRoomController {
 
     @Autowired
     private AmqpTemplate rabbitTemplate;
+
+    @Autowired
+    DomainDefineBean domainBean;
 }

@@ -31,4 +31,15 @@ public class AVUserInfo implements Serializable {
     private String client_id = "";
     private String client_name = "";
     private String binding_key = "";
+
+    public String getSrc_domain() {
+        return src_domain;
+    }
+
+    public void setSrc_domain(String src_domain) {
+        this.src_domain = src_domain;
+    }
+
+    //用户当前登录的域ID
+    private String src_domain = "";
 }

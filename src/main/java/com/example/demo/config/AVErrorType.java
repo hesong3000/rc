@@ -13,4 +13,5 @@ public class AVErrorType {
     public final static int ERR_STREAM_SUBSCRIBE = 109;     //订阅流过程出错
     public final static int ERR_STREAM_SHUTDOWN = 110;      //发布流已被关闭
     public final static int ERR_ROOM_BUSY = 111;            //会议室仍在使用中,不能删除
+    public final static int ERR_ROUTE_NOTEXIST = 112;       //暂无可用的查询路由
 }

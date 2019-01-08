@@ -17,6 +17,7 @@ import java.util.Date;
 @Component(value=MCUSubscriberInitializeTask.taskType)
 @Scope("prototype")
 public class MCUSubscriberInitializeTask extends SimpleTask implements Runnable {
+    //级联订阅不会发送此消息，因此不用针对级联作改动
     private static Logger log = LoggerFactory.getLogger(MCUSubscriberInitializeTask.class);
     public final static String taskType = "subscriber_initialize";
     public final static String taskFailedType = "remove_subscriber";    //此过程出现失败，需向MCU发送remove subscriber

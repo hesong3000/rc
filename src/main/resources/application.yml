@@ -1,3 +1,6 @@
+server:
+  #端口号
+  port: 8888
 spring:
     application:
         name: springboot-rabbitmq
@@ -18,3 +21,9 @@ spring:
           max-idle:8
           min-idle:0
         timeout: 5000
+
+#域路由信息
+map:
+  domain_155: domain_155
+  domain_161: domain_155,domain_161
+srcDomain: domain_115

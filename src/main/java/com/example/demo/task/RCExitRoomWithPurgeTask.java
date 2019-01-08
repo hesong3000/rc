@@ -32,6 +32,7 @@ public class RCExitRoomWithPurgeTask extends SimpleTask implements Runnable {
 
     @Override
     public void run() {
+        //此接口只处理逻辑会议室在本域的情况
         log.info("execute RCExitRoomWithPurgeTask");
         JSONObject requestMsg = JSON.parseObject(msg);
         String request_client_id = requestMsg.getString("client_id");
@@ -41,7 +42,6 @@ public class RCExitRoomWithPurgeTask extends SimpleTask implements Runnable {
         String avRoomItem = MQConstant.REDIS_ROOM_KEY_PREFIX+request_room_id;
         AVLogicRoom avLogicRoom = (AVLogicRoom)RedisUtils.hget(redisTemplate, avRoomsKey, avRoomItem);
         if(avLogicRoom == null){
-            log.error("{}: failed, room not exist msg: {}", RCExitRoomTask.taskType, requestMsg);
             return;
         }
 
@@ -68,6 +68,7 @@ public class RCExitRoomWithPurgeTask extends SimpleTask implements Runnable {
                 procMsg.put("type",RCExitRoomWithPurgeTask.taskRemovePublisherType);
                 procMsg.put("client_id",streamInfo.getPublish_clientid());
                 procMsg.put("room_id",avLogicRoom.getRoom_id());
+                procMsg.put("room_domain", avLogicRoom.getRoom_domain());
                 procMsg.put("stream_id",streamInfo.getPublish_streamid());
                 log.info("mq send to RC {}: {}",MQConstant.MQ_RC_BINDING_KEY,procMsg);
                 rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, procMsg);
@@ -79,6 +80,7 @@ public class RCExitRoomWithPurgeTask extends SimpleTask implements Runnable {
         exitroom_msg.put("type", RCExitRoomWithPurgeTask.taskExitRoomType);
         exitroom_msg.put("client_id", request_client_id);
         exitroom_msg.put("room_id", request_room_id);
+        exitroom_msg.put("room_domain", avLogicRoom.getRoom_domain());
         log.info("mq send RC {}: {}",MQConstant.MQ_RC_BINDING_KEY,exitroom_msg);
         rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, MQConstant.MQ_RC_BINDING_KEY, exitroom_msg);
     }

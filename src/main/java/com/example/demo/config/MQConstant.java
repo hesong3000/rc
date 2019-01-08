@@ -14,4 +14,7 @@ public class MQConstant {
     public final static String REDIS_MP_ROOM_KEY_PREFIX = "AV_MP_Room:";
     public final static String REDIS_STREAM_KEY_PREFIX = "AV_Stream:";
     public final static String MQ_MCU_KEY_PREFIX = "licode_mc_";
+
+    //级联相关常量
+    public final static String MQ_DOMAIN_EXCHANGE = "domainExchange";
 }

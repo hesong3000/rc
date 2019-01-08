@@ -5,6 +5,16 @@ import java.io.Serializable;
 public class AVStreamInfo implements Serializable{
     private String stream_id = "";
     private String room_id = "";
+
+    public String getRoom_domain() {
+        return room_domain;
+    }
+
+    public void setRoom_domain(String room_domain) {
+        this.room_domain = room_domain;
+    }
+
+    private String room_domain = "";
     private Boolean screencast = false;
     private Boolean audioMuted = false;
     private Boolean videoMuted = false;

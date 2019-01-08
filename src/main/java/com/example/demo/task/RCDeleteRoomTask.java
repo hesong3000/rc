@@ -2,8 +2,10 @@ package com.example.demo.task;
 
 
 import com.alibaba.fastjson.JSON;
+import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
 import com.example.demo.config.AVErrorType;
+import com.example.demo.config.DomainDefineBean;
 import com.example.demo.config.MQConstant;
 import com.example.demo.po.*;
 import org.slf4j.Logger;
@@ -28,6 +30,8 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
     private RedisTemplate<String, Object> redisTemplate;
     @Autowired
     private AmqpTemplate rabbitTemplate;
+    @Autowired
+    DomainDefineBean domainBean;
 
     @Override
     public void run() {
@@ -40,14 +44,19 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
             5、删除逻辑会议室
             6、更新mcu的使用率信息，以及会议室信息
          */
+        //删除会议室只会发生在本域，因此这个接口不用针对跨域作更改
         log.info("execute RCDeleteRoomTask at {}", new Date());
         JSONObject requestMsg = JSON.parseObject(msg);
         String room_id = requestMsg.getString("room_id");
         String client_id = requestMsg.getString("client_id");
-        if(room_id==null || client_id==null){
+        String room_domain = requestMsg.getString("room_domain");
+        if(room_id==null || client_id==null||room_domain==null){
             log.error("{}: msg lack params, msg: {}", RCDeleteRoomTask.taskType, requestMsg);
             return;
         }
+
+        if(room_domain.compareTo(domainBean.getSrcDomain())!=0)
+            return;
 
         int retcode = AVErrorType.ERR_NOERROR;
         //检查会议室是否存在
@@ -57,6 +66,7 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
         if(avLogicRoom == null){
             log.error("{}: failed, avroom not exist, key: {}, hashkey: {}",RCDeleteRoomTask.taskType, avRoomsKey,avRoomItem);
             retcode = AVErrorType.ERR_ROOM_NOTEXIST;
+            return;
         }
 
         //检查会议室创建者是否为本用户
@@ -76,7 +86,7 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
             }
         }
 
-        //向该用户发送
+        //向该用户发送(由于会议室只能在本域创建，则delete响应只需发送到本域)
         String request_client_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+client_id;
         JSONObject response_msg = new JSONObject();
         response_msg.put("type", RCDeleteRoomTask.taskResType);
@@ -88,50 +98,6 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
 
         if(retcode!=AVErrorType.ERR_NOERROR)
             return;
-
-        //查看发布流
-        Map<String, Integer> process_mcu_map = new HashMap<>();
-        Map<String, PublishStreamInfo>publishStreamInfoMap = avLogicRoom.getPublish_streams();
-        Iterator<Map.Entry<String, PublishStreamInfo>> publishstream_it = publishStreamInfoMap.entrySet().iterator();
-        while (publishstream_it.hasNext()){
-            PublishStreamInfo publishStreamInfo = publishstream_it.next().getValue();
-            int use_resource_count = publishStreamInfo.getSubscribers().size()+1;
-
-            if(process_mcu_map.containsKey(publishStreamInfo.getStream_process_mcuid())){
-                Integer all_use_resource_count = process_mcu_map.get(publishStreamInfo.getStream_process_mcuid());
-                process_mcu_map.put(publishStreamInfo.getStream_process_mcuid(), all_use_resource_count+use_resource_count);
-            }else{
-                process_mcu_map.put(publishStreamInfo.getStream_process_mcuid(), use_resource_count);
-            }
-
-            //向mcu发送取消发布流请求
-            String mcu_senkey = MQConstant.MQ_MCU_KEY_PREFIX+publishStreamInfo.getStream_process_mcuid();
-            JSONObject removePublish_msg = new JSONObject();
-            removePublish_msg.put("type",RCDeleteRoomTask.taskRemovePublishTask);
-            removePublish_msg.put("client_id", publishStreamInfo.getPublish_clientid());
-            removePublish_msg.put("stream_id", publishStreamInfo.getPublish_streamid());
-            log.info("mq send to mcu {}: {}", mcu_senkey,removePublish_msg);
-            rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mcu_senkey, removePublish_msg);
-
-            //删除AV_Stream:[StreamID]键
-            RedisUtils.delKey(redisTemplate, MQConstant.REDIS_STREAM_KEY_PREFIX+publishStreamInfo.getPublish_streamid());
-        }
-
-        //更新MCU使用率以及会议室信息
-        Iterator<Map.Entry<String, Integer>> procmcu_it = process_mcu_map.entrySet().iterator();
-        String mpservers_key = MQConstant.REDIS_MPINFO_HASH_KEY;
-        while(procmcu_it.hasNext()){
-            Map.Entry<String, Integer> entry = procmcu_it.next();
-            String proc_mcu_id = entry.getKey();
-            Integer proc_mcu_res_count = entry.getValue();
-            String mpserver_hashkey = MQConstant.REDIS_MP_ROOM_KEY_PREFIX+proc_mcu_id;
-            MPServerInfo mpServerInfo = (MPServerInfo)RedisUtils.hget(redisTemplate, mpservers_key,mpserver_hashkey);
-            if(mpServerInfo!=null){
-                mpServerInfo.setUserd_stream_count(mpServerInfo.getUserd_stream_count()-proc_mcu_res_count);
-                mpServerInfo.getRoom_list().remove(room_id);
-                RedisUtils.hset(redisTemplate,mpservers_key,mpserver_hashkey,mpServerInfo);
-            }
-        }
 
         //向其他再会用户发送room_delete_notice通知
         JSONObject notice_msg = new JSONObject();
@@ -146,13 +112,33 @@ public class RCDeleteRoomTask extends SimpleTask implements Runnable {
             String avuserroom_key = MQConstant.REDIS_USER_ROOM_KEY_PREFIX+roomMemInfo.getMem_id();
             String avroom_hashkey = avLogicRoom.getRoom_id();
             RedisUtils.hdel(redisTemplate,avuserroom_key,avroom_hashkey);
-
+            String mem_domain = roomMemInfo.getMem_domain();
             //向在线用户发送会议室删除通知
             if(roomMemInfo.getMem_id().compareTo(client_id)!=0 && roomMemInfo.isMem_Online()==true
                     && (room_memnum>2)){
-                String client_sendkey = MQConstant.MQ_CLIENT_KEY_PREFIX+roomMemInfo.getMem_id();
-                log.info("mq send to client {}: {}", client_sendkey, notice_msg);
-                rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, client_sendkey, notice_msg);
+                if(mem_domain.compareTo(domainBean.getSrcDomain())==0){
+                    String mem_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+roomMemInfo.getMem_id();
+                    log.info("mq send notice {}: {}",mem_bindkey,notice_msg);
+                    rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mem_bindkey, notice_msg);
+                }else{
+                    DomainRoute domainRoute = domainBean.getDstDomainRoute(mem_domain);
+                    if(domainRoute==null){
+                        log.warn("{} send msg failed while can not find available domain route to {}, msg: {}",
+                                MCUMuteStreamTask.taskType, mem_domain, notice_msg);
+                        continue;
+                    }
+
+                    JSONObject crossDomainmsg = new JSONObject();
+                    crossDomainmsg.put("type", CDCrossDomainMsgTask.taskType);
+                    crossDomainmsg.put("client_id", roomMemInfo.getMem_id());
+                    crossDomainmsg.put("encap_msg", notice_msg);
+                    List<DomainRoute> new_domain_list = new LinkedList<>();
+                    new_domain_list.add(domainRoute);
+                    JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));
+                    crossDomainmsg.put("domain_route", domain_array);
+                    log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, crossDomainmsg);
+                    rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", crossDomainmsg);
+                }
             }
         }
 
