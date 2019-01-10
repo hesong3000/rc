@@ -110,19 +110,11 @@ public class MCUAddPublishTask extends SimpleTask implements Runnable{
                 String emcu_avaliable_domain = mpServerInfo.getAval_domain();
                 if(isEmcu==false || emcu_avaliable_domain.compareTo(room_domain)!=0)
                     continue;
-//                if(mpServerInfo.getRoom_list().containsKey(room_id)){
-//                    //emcu可以负载均衡，但同一会议室目前使用同一个emcu，因为同一个会议室中订阅流的可能性比较高，在此使用业务逻辑避免mcu级联
-//                    desired_mp_bindingkey = mp_bindingkey;
-//                    has_idle_stream_count = mp_idle_stream_count;
-//                    selectMcu_id = mpServerInfo.getMp_id();
-//                    break;
-//                }else{
-                    if(mp_idle_stream_count>has_idle_stream_count){
-                        has_idle_stream_count = mp_idle_stream_count;
-                        desired_mp_bindingkey = mp_bindingkey;
-                        selectMcu_id = mpServerInfo.getMp_id();
-                    }
-                //}
+                if(mp_idle_stream_count>has_idle_stream_count){
+                    has_idle_stream_count = mp_idle_stream_count;
+                    desired_mp_bindingkey = mp_bindingkey;
+                    selectMcu_id = mpServerInfo.getMp_id();
+                }
             }
         }else{
             //若room域在本域，选择一个合适的MCU处理AddPublish请求(1判断取消，不利于mcu的负载均衡)
@@ -134,18 +126,14 @@ public class MCUAddPublishTask extends SimpleTask implements Runnable{
                 MPServerInfo mpServerInfo = (MPServerInfo)mcu_iter.next().getValue();
                 int mp_idle_stream_count = mpServerInfo.getMcuIdleReource();
                 String mp_bindingkey = mpServerInfo.getBinding_key();
-//                if(mpServerInfo.getRoom_list().containsKey(room_id)){
-//                    desired_mp_bindingkey = mp_bindingkey;
-//                    has_idle_stream_count = mp_idle_stream_count;
-//                    selectMcu_id = mpServerInfo.getMp_id();
-//                    break;
-//                }else{
-                    if(mp_idle_stream_count>has_idle_stream_count){
-                        has_idle_stream_count = mp_idle_stream_count;
-                        desired_mp_bindingkey = mp_bindingkey;
-                        selectMcu_id = mpServerInfo.getMp_id();
-                    }
-                //}
+                boolean isEmcu = mpServerInfo.isEmcu();
+                if(isEmcu==true)
+                    continue;
+                if(mp_idle_stream_count>has_idle_stream_count){
+                    has_idle_stream_count = mp_idle_stream_count;
+                    desired_mp_bindingkey = mp_bindingkey;
+                    selectMcu_id = mpServerInfo.getMp_id();
+                }
             }
         }
 

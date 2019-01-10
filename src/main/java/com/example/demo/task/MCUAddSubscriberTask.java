@@ -68,7 +68,8 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
         result.request_client_domain = client_domain;
         result.client_id = client_id;
         result.publish_stream_id = publish_stream_id;
-
+        String client_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+client_id;
+        requestMsg.put("client_bindkey", client_bindkey);
         //检查AVStreamInfo是否存在，不存在为代码BUG
         String avstream_key = MQConstant.REDIS_STREAM_KEY_PREFIX+publish_stream_id;
         AVStreamInfo avStreamInfo = (AVStreamInfo)RedisUtils.get(redisTemplate, avstream_key);
@@ -215,8 +216,10 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
             for(int mcu_index=0;mcu_index<publisherDomain_emcus_size;mcu_index++){
                 MPServerInfo mpServerInfo = publisherDomain_emcus.get(mcu_index);
                 //2无法计算资源，存在即合理
-                if(mpServerInfo.getSrc_domain().compareTo(publisher_domain)==0)
+                if(mpServerInfo.getSrc_domain().compareTo(publisher_domain)==0) {
+                    avaliable_mcu = mpServerInfo;
                     return procConditionTwo(avaliable_mcu, avLogicRoom, requestMsg);
+                }
             }
 
             return AVErrorType.ERR_MCURES_NOT_ENOUGH;
@@ -250,8 +253,10 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
             for(int mcu_index=0;mcu_index<publisherDomain_emcus_size;mcu_index++){
                 MPServerInfo mpServerInfo = publisherDomain_emcus.get(mcu_index);
                 //2无法计算资源，存在即合理
-                if(mpServerInfo.getSrc_domain().compareTo(publisher_domain)==0)
+                if(mpServerInfo.getSrc_domain().compareTo(publisher_domain)==0) {
+                    avaliable_mcu = mpServerInfo;
                     return procConditionFive(avaliable_mcu, avLogicRoom, requestMsg, result);
+                }
             }
 
             return AVErrorType.ERR_MCURES_NOT_ENOUGH;
@@ -345,15 +350,15 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
         mcu_0.put("mcu_domain", avail_mcu.getSrc_domain());
         mcu_0.put("route_index", 0);
         mcu_array.add(mcu_0);
-        JSONObject mcu_1 = new JSONObject();
-        mcu_1.put("mcu_id", avail_emcu2.getMp_id());
-        mcu_1.put("mcu_domain", avail_emcu2.getSrc_domain());
-        mcu_1.put("route_index", 1);
-        mcu_array.add(mcu_1);
+//        JSONObject mcu_1 = new JSONObject();
+//        mcu_1.put("mcu_id", avail_emcu2.getMp_id());
+//        mcu_1.put("mcu_domain", avail_emcu2.getSrc_domain());
+//        mcu_1.put("route_index", 1);
+//        mcu_array.add(mcu_1);
         JSONObject mcu_2 = new JSONObject();
         mcu_2.put("mcu_id", srcServerInfo.getMp_id());
         mcu_2.put("mcu_domain", srcServerInfo.getSrc_domain());
-        mcu_2.put("route_index", 2);
+        mcu_2.put("route_index", 1);
         mcu_array.add(mcu_2);
         cascadeSubscribe_msg.put("cascade_mcus", mcu_array);
 

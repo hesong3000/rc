@@ -95,6 +95,8 @@ public class RCGetRoomListTask extends SimpleTask implements Runnable {
             //若请求来自外域，若有属于该用户的消息，则将回复消息投递至远端RC
             if(roominfo_list.size()>0){
                 DomainRoute domainRoute = domainBean.getDstDomainRoute(request_src_domain);
+                if(domainRoute==null)
+                    return;
                 JSONObject crossDomainmsg = new JSONObject();
                 crossDomainmsg.put("type", CDCrossDomainMsgTask.taskType);
                 crossDomainmsg.put("client_id", client_id);

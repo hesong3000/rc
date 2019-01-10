@@ -49,11 +49,15 @@ public class RCGetRoomMemsTask extends SimpleTask implements Runnable{
             2、此为定向请求，需判定有无到目的domain的路由服务
          */
         boolean isFromOutterDomain = false;
-        String src_domain = requestMsg.getString("src_domain");
-        if(src_domain==null)
+        String src_domain = null;
+        if(requestMsg.containsKey("src_domain")==false) {
             isFromOutterDomain = false;
-        else
+            src_domain = domainBean.getSrcDomain();
+        }
+        else {
             isFromOutterDomain = true;
+            src_domain = requestMsg.getString("src_domain");
+        }
 
         JSONObject response_msg = new JSONObject();
         String avRoomsKey = MQConstant.REDIS_AVROOMS_KEY;
@@ -89,13 +93,16 @@ public class RCGetRoomMemsTask extends SimpleTask implements Runnable{
         AVLogicRoom avLogicRoom = (AVLogicRoom)RedisUtils.hget(redisTemplate, avRoomsKey, avRoomItem);
         if(avLogicRoom == null){
             retcode = AVErrorType.ERR_ROOM_NOTEXIST;
-            return;
         }
 
         //检查会议室是否有此成员
-        Map<String, RoomMemInfo> roomMemInfoMap = avLogicRoom.getRoom_mems();
-        if(roomMemInfoMap.containsKey(request_client_id) == false)
-            retcode =  AVErrorType.ERR_ROOM_KICK;
+        Map<String, RoomMemInfo> roomMemInfoMap = null;
+        if(avLogicRoom!=null){
+            roomMemInfoMap = avLogicRoom.getRoom_mems();
+            if(roomMemInfoMap.containsKey(request_client_id) == false)
+                retcode =  AVErrorType.ERR_ROOM_KICK;
+        }
+
         response_msg.put("type", RCGetRoomMemsTask.taskResType);
         response_msg.put("retcode", retcode);
         response_msg.put("room_id", room_id);
@@ -107,18 +114,22 @@ public class RCGetRoomMemsTask extends SimpleTask implements Runnable{
             }
             else{
                 //请求来自外域，则发送响应到目的域的RC，由RC中转
-                List<DomainRoute> new_domain_list = new LinkedList<>();
                 DomainRoute domainRoute = domainBean.getDstDomainRoute(src_domain);
                 if(domainRoute==null){
                     log.warn("{} send msg failed, while can not find domain route to {}, msg: {}",
                             RCGetRoomMemsTask.taskType, src_domain, response_msg);
                     return;
                 }
+                JSONObject crossDomainmsg = new JSONObject();
+                crossDomainmsg.put("type", CDCrossDomainMsgTask.taskType);
+                crossDomainmsg.put("client_id", request_client_id);
+                crossDomainmsg.put("encap_msg", response_msg);
+                List<DomainRoute> new_domain_list = new LinkedList<>();
                 new_domain_list.add(domainRoute);
                 JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));
-                response_msg.put("domain_route", domain_array);
-                log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, response_msg);
-                rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", response_msg);
+                crossDomainmsg.put("domain_route", domain_array);
+                log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, crossDomainmsg);
+                rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", crossDomainmsg);
             }
             return;
         }
@@ -142,18 +153,23 @@ public class RCGetRoomMemsTask extends SimpleTask implements Runnable{
             log.info("mq send client {}: {}", client_sendkey, response_msg);
             rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, client_sendkey, response_msg);
         }else{
-            List<DomainRoute> new_domain_list = new LinkedList<>();
+            //请求来自外域，则发送响应到目的域的RC，由RC中转
             DomainRoute domainRoute = domainBean.getDstDomainRoute(src_domain);
             if(domainRoute==null){
                 log.warn("{} send msg failed, while can not find domain route to {}, msg: {}",
                         RCGetRoomMemsTask.taskType, src_domain, response_msg);
                 return;
             }
+            JSONObject crossDomainmsg = new JSONObject();
+            crossDomainmsg.put("type", CDCrossDomainMsgTask.taskType);
+            crossDomainmsg.put("client_id", request_client_id);
+            crossDomainmsg.put("encap_msg", response_msg);
+            List<DomainRoute> new_domain_list = new LinkedList<>();
             new_domain_list.add(domainRoute);
             JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));
-            response_msg.put("domain_route", domain_array);
-            log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, response_msg);
-            rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", response_msg);
+            crossDomainmsg.put("domain_route", domain_array);
+            log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, crossDomainmsg);
+            rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", crossDomainmsg);
         }
     }
 }

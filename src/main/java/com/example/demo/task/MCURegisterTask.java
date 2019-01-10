@@ -2,6 +2,7 @@ package com.example.demo.task;
 
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONObject;
+import com.example.demo.config.DomainDefineBean;
 import com.example.demo.config.MQConstant;
 import com.example.demo.po.MPServerInfo;
 import org.slf4j.Logger;
@@ -27,6 +28,8 @@ public class MCURegisterTask extends SimpleTask implements Runnable {
     private RedisTemplate<String, Object> redisTemplate;
     @Autowired
     private AmqpTemplate rabbitTemplate;
+    @Autowired
+    DomainDefineBean domainBean;
 
     @Override
     @Transactional
@@ -55,6 +58,9 @@ public class MCURegisterTask extends SimpleTask implements Runnable {
                 log.error("{} lack src_domain or aval_domain value, msg: {}", MCURegisterTask.taskType, msg);
                 return;
             }
+        }else{
+            src_domain = domainBean.getSrcDomain();
+            aval_domain = "";
         }
 
 
@@ -76,10 +82,8 @@ public class MCURegisterTask extends SimpleTask implements Runnable {
             mpServerInfo.setMax_stream_count(max_stream_count);
             mpServerInfo.setReserve_stream_count(reserve_stream_count);
             mpServerInfo.setEmcu(isEmcu);
-            if(isEmcu==true) {
-                mpServerInfo.setSrc_domain(src_domain);
-                mpServerInfo.setAval_domain(aval_domain);
-            }
+            mpServerInfo.setSrc_domain(src_domain);
+            mpServerInfo.setAval_domain(aval_domain);
         }
         if(!RedisUtils.hset(redisTemplate,avMPs_key,avMP_item,mpServerInfo)){
             log.error("redis hset failed, key: {}, item: {}, value: {}",avMPs_key,avMP_item,mpServerInfo.toString());

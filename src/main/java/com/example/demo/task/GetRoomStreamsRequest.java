@@ -44,6 +44,7 @@ public class GetRoomStreamsRequest extends SimpleTask implements Runnable{
             return AVErrorType.ERR_PARAM_REQUEST;
         result.client_id = request_client_id;
         result.room_id = request_room_id;
+        result.room_domain = room_domain;
         if(room_domain.compareTo(domainBean.getSrcDomain())!=0){
             //发起跨域请求
             DomainRoute domainRoute = domainBean.getDstDomainRoute(room_domain);
@@ -92,6 +93,7 @@ public class GetRoomStreamsRequest extends SimpleTask implements Runnable{
         responseMsg.put("type", GetRoomStreamsRequest.taskResback);
         responseMsg.put("client_id", result.client_id);
         responseMsg.put("room_id", result.room_id);
+        responseMsg.put("room_domain",result.room_domain);
         if(processCode == AVErrorType.ERR_NOERROR) {
             responseMsg.put("retcode", processCode);
             JSONArray stream_array = new JSONArray();
@@ -157,6 +159,7 @@ public class GetRoomStreamsRequest extends SimpleTask implements Runnable{
     class Result{
         String client_id = "";
         String room_id = "";
+        String room_domain = "";
         boolean isSendToOutterDomain = false;
         String request_src_domain = "";
         Map<String, PublishStreamInfo> publish_streams = new HashMap<>();

@@ -109,6 +109,8 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
 
         //更新会议室成员状态，并重新存入redis
         avLogicRoom.getRoom_mems().get(request_client_id).setMem_Online(false);
+
+        log.info("hset key: {}, hashkey: {}, value: {}", avRoomsKey, avRoomItem, JSON.toJSONString(avLogicRoom));
         if(!RedisUtils.hset(redisTemplate,avRoomsKey,avRoomItem, avLogicRoom)){
             log.error("{}: redis hset avroom failed! {}",  RCExitRoomTask.taskType, avLogicRoom.toString());
             return AVErrorType.ERR_REDIS_STORE;

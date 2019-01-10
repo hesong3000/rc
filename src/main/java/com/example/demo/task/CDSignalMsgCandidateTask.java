@@ -3,7 +3,6 @@ package com.example.demo.task;
 import com.alibaba.fastjson.JSON;
 import com.alibaba.fastjson.JSONArray;
 import com.alibaba.fastjson.JSONObject;
-import com.example.demo.config.AVErrorType;
 import com.example.demo.config.DomainDefineBean;
 import com.example.demo.config.MQConstant;
 import com.example.demo.po.DomainRoute;
@@ -20,11 +19,11 @@ import java.util.Date;
 import java.util.LinkedList;
 import java.util.List;
 
-@Component(value= CDSignalMsgTask.taskType)
+@Component(value= CDSignalMsgCandidateTask.taskType)
 @Scope("prototype")
-public class CDSignalMsgTask extends SimpleTask implements Runnable{
-    private static Logger log = LoggerFactory.getLogger(CDSignalMsgTask.class);
-    public final static String taskType = "signal_message";
+public class CDSignalMsgCandidateTask extends SimpleTask implements Runnable{
+    private static Logger log = LoggerFactory.getLogger(CDSignalMsgCandidateTask.class);
+    public final static String taskType = "cascade_signal_candidate";
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
     @Autowired
@@ -34,7 +33,10 @@ public class CDSignalMsgTask extends SimpleTask implements Runnable{
 
     @Override
     public void run() {
-        log.info("execute CDSignalMsgTask at {}", new Date());
+        log.info("execute CDSignalMsgCandidateTask at {}, msg: {}", new Date(), msg);
+        msg = msg.replaceAll("\"\\{","{");
+        msg = msg.replaceAll("\\}\"","}");
+        log.warn("after signal candidate msg: {}", msg);
         JSONObject requestMsg = JSON.parseObject(msg);
         String mcu_id = requestMsg.getString("mcu_id");
         String mcu_domain = requestMsg.getString("mcu_domain");
