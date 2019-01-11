@@ -74,6 +74,7 @@ public class MCUFailMessageTask extends SimpleTask implements Runnable {
 
         //获取逻辑会议室
         String room_id = avStreamInfo.getRoom_id();
+        String room_domain = avStreamInfo.getRoom_domain();
         String avRoomsKey = MQConstant.REDIS_AVROOMS_KEY;
         String avRoomItem = MQConstant.REDIS_ROOM_KEY_PREFIX+room_id;
         AVLogicRoom avLogicRoom = (AVLogicRoom)RedisUtils.hget(redisTemplate, avRoomsKey, avRoomItem);
@@ -92,6 +93,8 @@ public class MCUFailMessageTask extends SimpleTask implements Runnable {
             rollback_msg.put("type", MCUFailMessageTask.taskPublishRollback);
             rollback_msg.put("client_id", client_id);
             rollback_msg.put("stream_id", stream_id);
+            rollback_msg.put("room_id", room_id);
+            rollback_msg.put("room_domain", room_domain);
             isPublisher = true;
         }
         else {
@@ -100,6 +103,8 @@ public class MCUFailMessageTask extends SimpleTask implements Runnable {
             rollback_msg.put("type", MCUFailMessageTask.taskSubscribRollback);
             rollback_msg.put("client_id", client_id);
             rollback_msg.put("publish_stream_id", stream_id);
+            rollback_msg.put("room_id", room_id);
+            rollback_msg.put("room_domain", room_domain);
             isPublisher = false;
         }
 

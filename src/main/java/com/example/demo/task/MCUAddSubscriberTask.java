@@ -353,15 +353,15 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
         mcu_0.put("mcu_domain", avail_mcu.getSrc_domain());
         mcu_0.put("route_index", 0);
         mcu_array.add(mcu_0);
-//        JSONObject mcu_1 = new JSONObject();
-//        mcu_1.put("mcu_id", avail_emcu2.getMp_id());
-//        mcu_1.put("mcu_domain", avail_emcu2.getSrc_domain());
-//        mcu_1.put("route_index", 0);
-//        mcu_array.add(mcu_1);
+        JSONObject mcu_1 = new JSONObject();
+        mcu_1.put("mcu_id", avail_emcu2.getMp_id());
+        mcu_1.put("mcu_domain", avail_emcu2.getSrc_domain());
+        mcu_1.put("route_index", 1);
+        mcu_array.add(mcu_1);
         JSONObject mcu_2 = new JSONObject();
         mcu_2.put("mcu_id", srcServerInfo.getMp_id());
         mcu_2.put("mcu_domain", srcServerInfo.getSrc_domain());
-        mcu_2.put("route_index", 1);
+        mcu_2.put("route_index", 2);
         mcu_array.add(mcu_2);
         cascadeSubscribe_msg.put("cascade_mcus", mcu_array);
 

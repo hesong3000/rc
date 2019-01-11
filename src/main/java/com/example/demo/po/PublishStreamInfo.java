@@ -20,24 +20,24 @@ public class PublishStreamInfo implements Serializable {
     private boolean audioMuted = false;
     private boolean videoMuted = false;
 
-    public Integer getAudio_ssrc() {
+    public Long getAudio_ssrc() {
         return audio_ssrc;
     }
 
-    public void setAudio_ssrc(Integer audio_ssrc) {
+    public void setAudio_ssrc(Long audio_ssrc) {
         this.audio_ssrc = audio_ssrc;
     }
 
-    public Integer getVideo_ssrc() {
+    public Long getVideo_ssrc() {
         return video_ssrc;
     }
 
-    public void setVideo_ssrc(Integer video_ssrc) {
+    public void setVideo_ssrc(Long video_ssrc) {
         this.video_ssrc = video_ssrc;
     }
 
-    private Integer audio_ssrc = 0;
-    private Integer video_ssrc = 0;
+    private Long audio_ssrc = 0L;
+    private Long video_ssrc = 0L;
     public String getPublish_streamid() {
         return publish_streamid;
     }

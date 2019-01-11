@@ -47,8 +47,8 @@ public class MCUPublishReadyTask extends SimpleTask implements Runnable{
         String client_id = jsonObject.getString("client_id");
         String stream_id = jsonObject.getString("stream_id");
         String mcu_id = jsonObject.getString("mcu_id");
-        Integer audio_ssrc = jsonObject.getInteger("audio_ssrc");
-        Integer video_ssrc = jsonObject.getInteger("video_ssrc");
+        Long audio_ssrc = jsonObject.getLong("audio_ssrc");
+        Long video_ssrc = jsonObject.getLong("video_ssrc");
         String avUserKey = MQConstant.REDIS_USER_KEY_PREFIX+client_id;
         //检查客户端是否存活
         AVUserInfo avUserInfo = (AVUserInfo)RedisUtils.get(redisTemplate,avUserKey);
