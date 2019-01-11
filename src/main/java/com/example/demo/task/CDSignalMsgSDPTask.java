@@ -24,6 +24,7 @@ import java.util.List;
 public class CDSignalMsgSDPTask extends SimpleTask implements Runnable{
     private static Logger log = LoggerFactory.getLogger(CDSignalMsgSDPTask.class);
     public final static String taskType = "cascade_signal_sdp";
+    public final static String signalMsgType = "signal_message";
     @Autowired
     private RedisTemplate<String, Object> redisTemplate;
     @Autowired
@@ -40,6 +41,7 @@ public class CDSignalMsgSDPTask extends SimpleTask implements Runnable{
         JSONObject requestMsg = JSON.parseObject(msg);
         String mcu_id = requestMsg.getString("mcu_id");
         String mcu_domain = requestMsg.getString("mcu_domain");
+        requestMsg.put("type", CDSignalMsgSDPTask.signalMsgType);
         if(mcu_domain.compareTo(domainBean.getSrcDomain())==0){
             String av_mps_key = MQConstant.REDIS_MPINFO_HASH_KEY;
             String av_mp_hashkey = MQConstant.REDIS_MP_ROOM_KEY_PREFIX+mcu_id;

@@ -24,6 +24,7 @@ spring:
 
 #域路由信息
 map:
-  domain_155: domain_155
-  domain_161: domain_155,domain_161
+  #domain_155: domain_155
+  #domain_161: domain_155,domain_161
+  domain_125: domain_125
 srcDomain: domain_115

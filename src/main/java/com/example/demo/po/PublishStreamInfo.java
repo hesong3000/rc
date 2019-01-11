@@ -19,6 +19,25 @@ public class PublishStreamInfo implements Serializable {
     private Map<String, String> subscribers = new HashMap<>();
     private boolean audioMuted = false;
     private boolean videoMuted = false;
+
+    public Integer getAudio_ssrc() {
+        return audio_ssrc;
+    }
+
+    public void setAudio_ssrc(Integer audio_ssrc) {
+        this.audio_ssrc = audio_ssrc;
+    }
+
+    public Integer getVideo_ssrc() {
+        return video_ssrc;
+    }
+
+    public void setVideo_ssrc(Integer video_ssrc) {
+        this.video_ssrc = video_ssrc;
+    }
+
+    private Integer audio_ssrc = 0;
+    private Integer video_ssrc = 0;
     public String getPublish_streamid() {
         return publish_streamid;
     }

@@ -307,6 +307,7 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
     //           过程：一次级联订阅、一次订阅
     private int procConditionTwo(MPServerInfo srcServerInfo, AVLogicRoom avLogicRoom, JSONObject orign_msg){
         String publish_stream_id = orign_msg.getString("publish_stream_id");
+        PublishStreamInfo publishStreamInfo = avLogicRoom.getPublish_streams().get(publish_stream_id);
         //选择本域合适的mcu和对应发布流域的emcu
         int has_idle_stream_count = 0;
         int has_idle_stream_count2 = 0;
@@ -343,6 +344,8 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
         cascadeSubscribe_msg.put("type", MCUAddSubscriberTask.cascadeSubscribeType);
         cascadeSubscribe_msg.put("cascade_route", 0);
         cascadeSubscribe_msg.put("stream_id", publish_stream_id);
+        cascadeSubscribe_msg.put("audio_ssrc", publishStreamInfo.getAudio_ssrc());
+        cascadeSubscribe_msg.put("video_ssrc", publishStreamInfo.getVideo_ssrc());
         cascadeSubscribe_msg.put("ecap_msg", orign_msg);
         JSONArray mcu_array = new JSONArray();
         JSONObject mcu_0 = new JSONObject();
@@ -353,7 +356,7 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
 //        JSONObject mcu_1 = new JSONObject();
 //        mcu_1.put("mcu_id", avail_emcu2.getMp_id());
 //        mcu_1.put("mcu_domain", avail_emcu2.getSrc_domain());
-//        mcu_1.put("route_index", 1);
+//        mcu_1.put("route_index", 0);
 //        mcu_array.add(mcu_1);
         JSONObject mcu_2 = new JSONObject();
         mcu_2.put("mcu_id", srcServerInfo.getMp_id());
@@ -362,10 +365,11 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
         mcu_array.add(mcu_2);
         cascadeSubscribe_msg.put("cascade_mcus", mcu_array);
 
+        MPServerInfo first_mcu = avail_mcu;
         //将级联订阅消息发送至第一个从订阅终端方向开始的mcu
-        String mcu_domain = avail_mcu.getSrc_domain();
+        String mcu_domain = first_mcu.getSrc_domain();
         if(mcu_domain.compareTo(domainBean.getSrcDomain())==0){
-            String mcu_id = avail_mcu.getMp_id();
+            String mcu_id = first_mcu.getMp_id();
             String mcu_bindkey = MQConstant.MQ_MCU_KEY_PREFIX+mcu_id;
             log.info("mq send to mcu {}: {}", mcu_bindkey,cascadeSubscribe_msg);
             rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mcu_bindkey, cascadeSubscribe_msg);
@@ -380,7 +384,7 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
 
             JSONObject crossDomainmsg = new JSONObject();
             crossDomainmsg.put("type", CDCrossDomainToMCUTask.taskType);
-            crossDomainmsg.put("mcu_id", avail_mcu.getMp_id());
+            crossDomainmsg.put("mcu_id", first_mcu.getMp_id());
             crossDomainmsg.put("encap_msg", cascadeSubscribe_msg);
             List<DomainRoute> new_domain_list = new LinkedList<>();
             new_domain_list.add(domainRoute);
@@ -411,7 +415,7 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
         if(result.sub_emcu_id.length()==0 || result.sub_emcu_domain.length()==0)
             return AVErrorType.ERR_MCURES_NOT_ENOUGH;
         String publish_stream_id = orign_msg.getString("publish_stream_id");
-
+        PublishStreamInfo publishStreamInfo = avLogicRoom.getPublish_streams().get(publish_stream_id);
         //选择本域合适的emcu
         int has_idle_stream_count = 0;
         MPServerInfo avail_emcu = null;
@@ -440,6 +444,8 @@ public class MCUAddSubscriberTask extends SimpleTask implements Runnable {
         cascadeSubscribe_msg.put("type", MCUAddSubscriberTask.cascadeSubscribeType);
         cascadeSubscribe_msg.put("cascade_route", 0);
         cascadeSubscribe_msg.put("stream_id", publish_stream_id);
+        cascadeSubscribe_msg.put("audio_ssrc", publishStreamInfo.getAudio_ssrc());
+        cascadeSubscribe_msg.put("video_ssrc", publishStreamInfo.getVideo_ssrc());
         cascadeSubscribe_msg.put("ecap_msg", orign_msg);
         JSONArray mcu_array = new JSONArray();
         JSONObject mcu_0 = new JSONObject();

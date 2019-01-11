@@ -40,6 +40,8 @@ public class CDPublishReadyTask extends SimpleTask implements Runnable{
         String mcu_id = jsonObject.getString("mcu_id");
         String mcu_domain = jsonObject.getString("mcu_domain");
         String room_id = jsonObject.getString("room_id");
+        Integer audio_ssrc = jsonObject.getInteger("audio_ssrc");
+        Integer video_ssrc = jsonObject.getInteger("video_ssrc");
         JSONObject options_msg = jsonObject.getJSONObject("options");
         if(client_id==null||stream_id==null||mcu_id==null||mcu_domain==null||room_id==null||options_msg==null){
             log.error("{} msg lack params, msg: {}", CDPublishReadyTask.taskType, msg);
@@ -94,6 +96,8 @@ public class CDPublishReadyTask extends SimpleTask implements Runnable{
             publishStreamInfo.setScreencast(screencast);
             publishStreamInfo.setAudioMuted(!has_audio);
             publishStreamInfo.setVideoMuted(!has_video);
+            publishStreamInfo.setAudio_ssrc(audio_ssrc);
+            publishStreamInfo.setVideo_ssrc(video_ssrc);
         }
 
         MPServerInfo mcu_resource = new MPServerInfo();

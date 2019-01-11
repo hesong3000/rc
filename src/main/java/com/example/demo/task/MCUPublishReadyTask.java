@@ -47,6 +47,8 @@ public class MCUPublishReadyTask extends SimpleTask implements Runnable{
         String client_id = jsonObject.getString("client_id");
         String stream_id = jsonObject.getString("stream_id");
         String mcu_id = jsonObject.getString("mcu_id");
+        Integer audio_ssrc = jsonObject.getInteger("audio_ssrc");
+        Integer video_ssrc = jsonObject.getInteger("video_ssrc");
         String avUserKey = MQConstant.REDIS_USER_KEY_PREFIX+client_id;
         //检查客户端是否存活
         AVUserInfo avUserInfo = (AVUserInfo)RedisUtils.get(redisTemplate,avUserKey);
@@ -105,6 +107,8 @@ public class MCUPublishReadyTask extends SimpleTask implements Runnable{
             crossdomain_msg.put("type", CDPublishReadyTask.taskType);
             crossdomain_msg.put("room_id", room_id);
             crossdomain_msg.put("mcu_domain", mpServerInfo.getSrc_domain());
+            crossdomain_msg.put("audio_ssrc", audio_ssrc);
+            crossdomain_msg.put("video_ssrc", video_ssrc);
             JSONObject option_msg = new JSONObject();
             option_msg.put("video", !avStreamInfo.getVideoMuted());
             option_msg.put("audio", !avStreamInfo.getAudioMuted());
@@ -157,6 +161,8 @@ public class MCUPublishReadyTask extends SimpleTask implements Runnable{
                 publishStreamInfo.setScreencast(avStreamInfo.getScreencast());
                 publishStreamInfo.setAudioMuted(avStreamInfo.getAudioMuted());
                 publishStreamInfo.setVideoMuted(avStreamInfo.getVideoMuted());
+                publishStreamInfo.setAudio_ssrc(audio_ssrc);
+                publishStreamInfo.setVideo_ssrc(video_ssrc);
             }
 
             try {
