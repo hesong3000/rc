@@ -129,7 +129,7 @@ public class MCURemoveSubscriberTask extends SimpleTask implements Runnable {
                         //更新MCU使用率信息
                         //若publishstream在本域处理，则更新mcu使用率信息
                         //流发布成功，占用一路mcu资源
-                        mpServerInfo.addMcuUseResource(room_id, 1);
+                        mpServerInfo.releaseMcuUseResource(room_id, publish_stream_id,1);
                         //将MCU的更新信息存储至Redis
                         if(RedisUtils.hset(redisTemplate, av_mps_key, av_mp_hashkey, mpServerInfo)==false){
                             log.error("redis hset mpserver info failed, key: {} hashket: {}, value: {}",

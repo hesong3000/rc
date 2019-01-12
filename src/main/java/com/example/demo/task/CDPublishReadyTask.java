@@ -51,6 +51,8 @@ public class CDPublishReadyTask extends SimpleTask implements Runnable{
         Boolean has_audio = options_msg.getBoolean("audio");
         Boolean screencast = options_msg.getBoolean("screencast");
 
+
+
         String avRooms_key = MQConstant.REDIS_AVROOMS_KEY;
         String avRoom_hashKey = MQConstant.REDIS_ROOM_KEY_PREFIX+room_id;
         AVLogicRoom avLogicRoom = (AVLogicRoom)RedisUtils.hget(redisTemplate, avRooms_key, avRoom_hashKey);

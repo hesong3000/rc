@@ -101,17 +101,11 @@ public class MCURemovePublishTask extends SimpleTask implements Runnable {
                             String mcu_key = MQConstant.MQ_MCU_KEY_PREFIX+mcu_id;
                             log.info("mq send to mcu {}: {}", mcu_key,requestMsg);
                             rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mcu_key, requestMsg);
-                            //检查此项发布流的移除会减少的mcu使用路数(发布流路数1和订阅此流的订阅流路数)
-                            int stream_reduce = 0;
-                            if(mcu_info.isEmcu()==false)
-                                stream_reduce = 1+publishStreamInfo.getSubscribers().size();
-                            else
-                                stream_reduce = 1;
                             //更新hash键AV_MPs的mcu使用率
                             String mcu_hashkey = MQConstant.REDIS_MP_ROOM_KEY_PREFIX+mcu_id;
                             MPServerInfo mpServerInfo = (MPServerInfo)RedisUtils.hget(redisTemplate, MQConstant.REDIS_MPINFO_HASH_KEY,mcu_hashkey);
                             if(mpServerInfo!=null){
-                                mpServerInfo.releaseMcuUseResource(room_id,stream_reduce);
+                                mpServerInfo.clearMcuUseResourceOnRemove(room_id,stream_id);
                                 if(RedisUtils.hset(redisTemplate, MQConstant.REDIS_MPINFO_HASH_KEY, mcu_hashkey, mpServerInfo)==false){
                                     log.error("redis hset failed, key: {}, hashkey: {}, value: {}",
                                             MQConstant.REDIS_MPINFO_HASH_KEY,
@@ -153,21 +147,39 @@ public class MCURemovePublishTask extends SimpleTask implements Runnable {
                 }
 
                 //向会议室在线成员发布stream_removed_notice通知
+                JSONObject stream_remove_notice = new JSONObject();
+                stream_remove_notice.put("type", MCURemovePublishTask.taskNotType);
+                stream_remove_notice.put("client_id", client_id);
+                stream_remove_notice.put("room_id", avLogicRoom.getRoom_id());
+                stream_remove_notice.put("stream_id", stream_id);
                 Iterator<Map.Entry<String, RoomMemInfo>> iterator = avLogicRoom.getRoom_mems().entrySet().iterator();
                 while (iterator.hasNext()) {
                     Map.Entry<String, RoomMemInfo> entry = iterator.next();
                     RoomMemInfo roomMemInfo = entry.getValue();
                     if(roomMemInfo.getMem_id().compareTo(client_id)==0)
                         continue;
-                    if(roomMemInfo.isMem_Online()==true){
-                        String client_bindkey = MQConstant.MQ_CLIENT_KEY_PREFIX+roomMemInfo.getMem_id();
-                        JSONObject stream_remove_notice = new JSONObject();
-                        stream_remove_notice.put("type", MCURemovePublishTask.taskNotType);
-                        stream_remove_notice.put("client_id", client_id);
-                        stream_remove_notice.put("room_id", avLogicRoom.getRoom_id());
-                        stream_remove_notice.put("stream_id", stream_id);
-                        log.info("mq send to client {}: {}", client_bindkey, stream_remove_notice);
-                        rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, client_bindkey, stream_remove_notice);
+
+                    if(roomMemInfo.isMem_Online()==false)
+                        continue;
+
+                    if(roomMemInfo.getMem_domain().compareTo(domainBean.getSrcDomain())==0){
+                        String mem_routingkey = MQConstant.MQ_CLIENT_KEY_PREFIX+roomMemInfo.getMem_id();
+                        log.info("mq send notice {}: {}",mem_routingkey,stream_remove_notice);
+                        rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mem_routingkey, stream_remove_notice);
+                    }else{
+                        DomainRoute domainRoute = domainBean.getDstDomainRoute(roomMemInfo.getMem_domain());
+                        if(domainRoute!=null){
+                            JSONObject crossDomainmsg = new JSONObject();
+                            crossDomainmsg.put("type", CDCrossDomainMsgTask.taskType);
+                            crossDomainmsg.put("client_id", roomMemInfo.getMem_id());
+                            crossDomainmsg.put("encap_msg", stream_remove_notice);
+                            List<DomainRoute> new_domain_list = new LinkedList<>();
+                            new_domain_list.add(domainRoute);
+                            JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));
+                            crossDomainmsg.put("domain_route", domain_array);
+                            log.info("send msg to {}, msg {}", MQConstant.MQ_DOMAIN_EXCHANGE, crossDomainmsg);
+                            rabbitTemplate.convertAndSend(MQConstant.MQ_DOMAIN_EXCHANGE, "", crossDomainmsg);
+                        }
                     }
                 }
 

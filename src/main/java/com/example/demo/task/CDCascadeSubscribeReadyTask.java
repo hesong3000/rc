@@ -38,6 +38,9 @@ public class CDCascadeSubscribeReadyTask extends SimpleTask implements Runnable{
         log.info("execute CDCascadeSubscribeReadyTask at {}", new Date());
         JSONObject requestMsg = JSON.parseObject(msg);
         String stream_id = requestMsg.getString("stream_id");
+        String local_mcu_domain = requestMsg.getString("local_mcu_domain");
+        String local_mcu_id = requestMsg.getString("local_mcu_id");
+
         //查找发布流信息
         String avstream_key = MQConstant.REDIS_STREAM_KEY_PREFIX+stream_id;
         AVStreamInfo avStreamInfo = (AVStreamInfo)RedisUtils.get(redisTemplate, avstream_key);
@@ -47,19 +50,22 @@ public class CDCascadeSubscribeReadyTask extends SimpleTask implements Runnable{
         }
         String room_id = avStreamInfo.getRoom_id();
         String room_domain = avStreamInfo.getRoom_domain();
-        String mcu_id = requestMsg.getString("mcu_id");
-        String av_mps_key = MQConstant.REDIS_MPINFO_HASH_KEY;
-        String av_mp_hashkey = MQConstant.REDIS_MP_ROOM_KEY_PREFIX+mcu_id;
-        MPServerInfo mpServerInfo = (MPServerInfo)RedisUtils.hget(redisTemplate, av_mps_key, av_mp_hashkey);
-        if(mpServerInfo != null){
-            //更新MCU使用率信息
-            //若publishstream在本域处理，则更新mcu使用率信息
-            //流发布成功，占用一路mcu资源
-            mpServerInfo.addMcuUseResource(room_id, 1);
-            //将MCU的更新信息存储至Redis
-            if(RedisUtils.hset(redisTemplate, av_mps_key, av_mp_hashkey, mpServerInfo)==false){
-                log.error("redis hset mpserver info failed, key: {} hashket: {}, value: {}",
-                        av_mps_key, av_mp_hashkey, mpServerInfo);
+        if(local_mcu_domain.compareTo(domainBean.getSrcDomain())==0){
+            //查询处理发布流的mcu信息，无法查询到是BUG
+            String av_mps_key = MQConstant.REDIS_MPINFO_HASH_KEY;
+            String av_mp_hashkey = MQConstant.REDIS_MP_ROOM_KEY_PREFIX+local_mcu_id;
+            MPServerInfo mpServerInfo = (MPServerInfo)RedisUtils.hget(redisTemplate, av_mps_key, av_mp_hashkey);
+            if(mpServerInfo != null) {
+                //更新MCU使用率信息
+                //若publishstream在本域处理，则更新mcu使用率信息
+                //流发布成功，占用一路mcu资源
+                mpServerInfo.addMcuUseResource(room_id, stream_id,1);
+
+                //将MCU的更新信息存储至Redis
+                if(RedisUtils.hset(redisTemplate, av_mps_key, av_mp_hashkey, mpServerInfo)==false){
+                    log.error("redis hset mpserver info failed, key: {} hashket: {}, value: {}",
+                            av_mps_key, av_mp_hashkey, mpServerInfo);
+                }
             }
         }
 

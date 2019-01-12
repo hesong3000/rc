@@ -50,22 +50,13 @@ public class CDCrossDomainToMCUTask extends SimpleTask implements Runnable{
                 log.warn("{} failed while not enough resource",CDCrossDomainToMCUTask.addSubscribeType);
                 return;
             }
-            String room_id = encap_msg.getString("room_id");
-            //更新mcu资源
-            mpServerInfo.addMcuUseResource(room_id,1);
-            //将MCU的更新信息存储至Redis
-            if(RedisUtils.hset(redisTemplate, av_mps_key, av_mp_hashkey, mpServerInfo)==false){
-                log.error("redis hset mpserver info failed, key: {} hashket: {}, value: {}",
-                        av_mps_key, av_mp_hashkey, mpServerInfo);
-            }
         }else if(mcu_msg_type.compareTo(CDCrossDomainToMCUTask.removePublisherType)==0){
             //删除AVStreamInfo键
             String stream_id = encap_msg.getString("stream_id");
             RedisUtils.delKey(redisTemplate, MQConstant.REDIS_STREAM_KEY_PREFIX+stream_id);
-
             String room_id = encap_msg.getString("room_id");
             //更新mcu资源
-            mpServerInfo.releaseMcuUseResource(room_id,1);
+            mpServerInfo.clearMcuUseResourceOnRemove(room_id,stream_id);
             //将MCU的更新信息存储至Redis
             if(RedisUtils.hset(redisTemplate, av_mps_key, av_mp_hashkey, mpServerInfo)==false){
                 log.error("redis hset mpserver info failed, key: {} hashket: {}, value: {}",
@@ -73,8 +64,9 @@ public class CDCrossDomainToMCUTask extends SimpleTask implements Runnable{
             }
         }else if(mcu_msg_type.compareTo(CDCrossDomainToMCUTask.removeSubscriberType)==0){
             String room_id = encap_msg.getString("room_id");
+            String publish_stream_id = encap_msg.getString("publish_stream_id");
             //更新mcu资源
-            mpServerInfo.releaseMcuUseResource(room_id,1);
+            mpServerInfo.releaseMcuUseResource(room_id,publish_stream_id,1);
             //将MCU的更新信息存储至Redis
             if(RedisUtils.hset(redisTemplate, av_mps_key, av_mp_hashkey, mpServerInfo)==false){
                 log.error("redis hset mpserver info failed, key: {} hashket: {}, value: {}",

@@ -45,49 +45,68 @@ public class MPServerInfo implements Serializable {
         this.reserve_stream_count = reserve_stream_count;
     }
 
-    public Map<String, Integer> getRoom_list() {
-        return room_list;
-    }
-
-    public void setRoom_list(Map<String, Integer> room_list) {
-        this.room_list.clear();
-        this.room_list.putAll(room_list);
-    }
-
-    public void addMcuUseResource(String room_id, int mcu_resource_count){
-        if(room_list.containsKey(room_id)==false){
-             room_list.put(room_id,mcu_resource_count);
-        }else{
-            room_list.put(room_id, room_list.get(room_id)+mcu_resource_count);
-        }
-    }
-
     public int getMcuIdleReource(){
         int use_mcu_resource = 0;
-        Iterator<Map.Entry<String, Integer>> iterator = room_list.entrySet().iterator();
-        while (iterator.hasNext()){
-            int room_resource_count = iterator.next().getValue();
-            use_mcu_resource = use_mcu_resource+room_resource_count;
+        Iterator<Map.Entry<String, Map<String, Integer>>> room_iter = room_stream_list.entrySet().iterator();
+        while(room_iter.hasNext()){
+            Map<String, Integer> roomStreams = room_iter.next().getValue();
+            Iterator<Map.Entry<String, Integer>> roomStream_iter = roomStreams.entrySet().iterator();
+            while (roomStream_iter.hasNext()){
+                int room_resource_count = roomStream_iter.next().getValue();
+                use_mcu_resource = use_mcu_resource+room_resource_count;
+            }
         }
         return (max_stream_count-reserve_stream_count-use_mcu_resource)<0 ? 0 : (max_stream_count-reserve_stream_count-use_mcu_resource);
     }
 
-    public void releaseMcuUseResource(String room_id, Integer mcu_resource){
-        if(room_list.containsKey(room_id)==true){
-            if(room_list.get(room_id) <= mcu_resource)
-                room_list.put(room_id, 0);
-            else
-                room_list.put(room_id, room_list.get(room_id)-mcu_resource);
+    private Map<String, Map<String, Integer>> room_stream_list = new HashMap<>();
+    public void addMcuUseResource(String room_id, String publish_stream_id, int mcu_resource_count){
+        if(room_stream_list.containsKey(room_id)==false){
+            Map<String, Integer> roomStreams = new HashMap<>();
+            roomStreams.put(publish_stream_id, mcu_resource_count);
+            room_stream_list.put(room_id, roomStreams);
+        }else{
+            Map<String, Integer> roomStreams = room_stream_list.get(room_id);
+            if(roomStreams.containsKey(publish_stream_id)==false){
+                roomStreams.put(publish_stream_id, mcu_resource_count);
+            }else
+                roomStreams.put(publish_stream_id, roomStreams.get(publish_stream_id)+mcu_resource_count);
+            room_stream_list.put(room_id, roomStreams);
         }
     }
 
-    //删除会议室的时候调用
-    public void clearMcuResourceOnDelete(String room_id){
-        if(room_list.containsKey(room_id)==true)
-            room_list.remove(room_id);
+    public void releaseMcuUseResource(String room_id, String publish_stream_id, Integer mcu_resource){
+        if(room_stream_list.containsKey(room_id)==true){
+            Map<String, Integer> roomStreams = room_stream_list.get(room_id);
+            if(roomStreams.containsKey(publish_stream_id)==true){
+                if(roomStreams.get(publish_stream_id)<=mcu_resource)
+                    roomStreams.remove(publish_stream_id);
+                else
+                    roomStreams.put(publish_stream_id, roomStreams.get(publish_stream_id)-mcu_resource);
+            }
+
+            if(roomStreams.size()==0)
+                room_stream_list.remove(room_id);
+        }
     }
 
-    private Map<String, Integer> room_list = new HashMap<>();
+    public void clearMcuUseResourceOnRemove(String room_id, String publish_stream_id){
+        if(room_stream_list.containsKey(room_id)==true){
+            Map<String, Integer> roomStreams = room_stream_list.get(room_id);
+            roomStreams.remove(publish_stream_id);
+
+            if(roomStreams.size()==0)
+                room_stream_list.remove(room_id);
+        }
+    }
+
+    public Map<String, Map<String, Integer>> getRoom_stream_list() {
+        return room_stream_list;
+    }
+
+    public void setRoom_stream_list(Map<String, Map<String, Integer>> room_stream_list) {
+        this.room_stream_list = room_stream_list;
+    }
 
     public String getSrc_domain() {
         return src_domain;
@@ -129,7 +148,7 @@ public class MPServerInfo implements Serializable {
         mpServerInfo.setBinding_key(this.binding_key);
         mpServerInfo.setMax_stream_count(this.max_stream_count);
         mpServerInfo.setReserve_stream_count(this.reserve_stream_count);
-        mpServerInfo.setRoom_list(new HashMap(this.room_list));
+        mpServerInfo.setRoom_stream_list(new HashMap(this.room_stream_list));
         return mpServerInfo;
     }
 

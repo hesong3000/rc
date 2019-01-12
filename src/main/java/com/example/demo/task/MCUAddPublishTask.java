@@ -149,7 +149,7 @@ public class MCUAddPublishTask extends SimpleTask implements Runnable{
             log.error("can not get MPServerInfo, msg: {}", msg);
             return AVErrorType.ERR_MCURES_NOT_ENOUGH;
         }
-        mpServerInfo.addMcuUseResource(room_id, 0);
+        mpServerInfo.addMcuUseResource(room_id, stream_id,0);
         //将MCU的更新信息存储至Redis
         if(RedisUtils.hset(redisTemplate, av_mps_key, av_mp_hashkey, mpServerInfo)==false){
             log.error("redis hset mpserver info failed, key: {} hashket: {}, value: {}",

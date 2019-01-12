@@ -68,7 +68,7 @@ public class MCUSubscriberReady extends SimpleTask implements Runnable {
             String av_mp_hashkey = MQConstant.REDIS_MP_ROOM_KEY_PREFIX+mcu_id;
             MPServerInfo mpServerInfo = (MPServerInfo)RedisUtils.hget(redisTemplate, av_mps_key, av_mp_hashkey);
             if(mpServerInfo!=null){
-                mpServerInfo.addMcuUseResource(roomID, 1);
+                mpServerInfo.addMcuUseResource(roomID, publish_stream_id,1);
             }else{
                 log.error("can not get MPServerInfo, msg: {}", msg);
                 return;
@@ -103,6 +103,8 @@ public class MCUSubscriberReady extends SimpleTask implements Runnable {
                         MCUSubscriberReady.taskType, roomDomain, jsonObject);
                 return;
             }
+            jsonObject.put("room_id", roomID);
+            jsonObject.put("room_domain", roomDomain);
             List<DomainRoute> new_domain_list = new LinkedList<>();
             new_domain_list.add(domainRoute);
             JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));

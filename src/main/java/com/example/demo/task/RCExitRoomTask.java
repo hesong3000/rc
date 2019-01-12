@@ -150,10 +150,9 @@ public class RCExitRoomTask extends SimpleTask implements Runnable {
                 DomainRoute domainRoute = domainBean.getDstDomainRoute(mem_domain);
                 if(domainRoute!=null){
                     JSONObject crossDomainmsg = new JSONObject();
-                    crossDomainmsg.put("type", CDStreamAddNoticeTask.taskType);
-                    crossDomainmsg.put("room_domain", result.avLogicRoom.getRoom_domain());
-                    crossDomainmsg.put("notice_client_id", mem_id);
-                    crossDomainmsg.put("notice_msg", notice_msg);
+                    crossDomainmsg.put("type", CDCrossDomainMsgTask.taskType);
+                    crossDomainmsg.put("client_id", roomMemInfo.getMem_id());
+                    crossDomainmsg.put("encap_msg", notice_msg);
                     List<DomainRoute> new_domain_list = new LinkedList<>();
                     new_domain_list.add(domainRoute);
                     JSONArray domain_array = JSONArray.parseArray(JSONObject.toJSONString(new_domain_list));

@@ -178,6 +178,10 @@ public class RCEnterRoomTask extends SimpleTask implements Runnable{
             return -1;
 
         AVLogicRoom avLogicRoom = result.avLogicRoom;
+        JSONObject notice_msg = new JSONObject();
+        notice_msg.put("type", RCEnterRoomTask.taskNotType);
+        notice_msg.put("room_id", avLogicRoom.getRoom_id());
+        notice_msg.put("client_id", result.request_client_id);
         Iterator<Map.Entry<String, RoomMemInfo>> iterator = avLogicRoom.getRoom_mems().entrySet().iterator();
         while (iterator.hasNext()){
             Map.Entry<String, RoomMemInfo> entry = iterator.next();
@@ -187,10 +191,6 @@ public class RCEnterRoomTask extends SimpleTask implements Runnable{
             if(mem_id.compareTo(result.request_client_id)==0 || mem_online == false)
                 continue;
             String mem_routingkey = MQConstant.MQ_CLIENT_KEY_PREFIX+mem_id;
-            JSONObject notice_msg = new JSONObject();
-            notice_msg.put("type", RCEnterRoomTask.taskNotType);
-            notice_msg.put("room_id", avLogicRoom.getRoom_id());
-            notice_msg.put("client_id", result.request_client_id);
             if(roomMemInfo.getMem_domain().compareTo(domainBean.getSrcDomain())==0){
                 log.info("mq send notice {}: {}",mem_routingkey,notice_msg);
                 rabbitTemplate.convertAndSend(MQConstant.MQ_EXCHANGE, mem_routingkey, notice_msg);
